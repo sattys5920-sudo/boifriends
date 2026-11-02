@@ -1,3 +1,4 @@
+from PIL import Image
 # 도쿄·ACCA 맵 11개 + 캐릭터를 걷기 미리보기(tk_world/)용으로 묶어요
 #   python3 tk_world_build.py  (먼저 maps/*.py, tk_npcs.py 실행) → tk_world/maps/*.png, tk_world/data.json
 import json, os, shutil
@@ -10,7 +11,7 @@ for name in SIZES:
     for k in ('bg', 'obj'): shutil.copy(f'out/{name}_{k}.png', f'{OUTD}/maps/{name}_{k}.png')
     objs = [dict(n=o['name'], b=o['box'], s=[o['sx'], o['sy'], o['sw'], o['sh']], p=[o['x'], o['y']], door=o['door'], solid=o['solid'], act=o['act']) for o in j['objs']]
     maps[name] = dict(label=LABELS[name], W=j['W'], H=j['H'], NX=j['NX'], NY=j['NY'], OX=j['OX'], OY=j['OY'], objs=objs, areas=j['areas'], water=j['water'], start=j['start'])
-npcs = json.load(open('out/tk_chars.json')); shutil.copy('out/tk_chars.png', f'{OUTD}/chars.png')
+npcs = json.load(open('out/tk_chars.json')); Image.open('out/tk_chars.png').save(f'{OUTD}/chars.webp', 'WEBP', quality=92, method=6)
 if os.path.exists(f'{OUTD}/npcs.png'): os.remove(f'{OUTD}/npcs.png')
 # 검사: 캐릭터 칸·출구 도착 칸이 막혀 있지 않은지
 def blocked(m):

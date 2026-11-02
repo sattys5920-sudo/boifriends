@@ -9,7 +9,8 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
-FW, FH, TARGET = 32, 44, 40          # 칸 크기, 캐릭터 키(px)
+FW, FH, TARGET = 32, 44, 40          # 칸 크기, 캐릭터 키(px) — 게임 안 논리 크기
+R = 3                                # 시트는 R배 해상도로 저장해요 (화면에서 부드럽게 줄여 그림)
 DIRS = ['down', 'up', 'left', 'right']
 # 옆모습은 시트마다 섞여 있어서 눈으로 보고 골랐어요: (줄, 칸). right가 None이면 왼쪽을 뒤집어 써요
 SIDE = {
@@ -178,12 +179,19 @@ def trim_side_hair(img, ref):
             if 0 <= x < w: a[y, x] = OL
     return a
 def shrink(img, scale):
+    img = img.copy(); m = img[..., 3] > 0
+    # 누끼 테두리 정리: 바깥 1px(배경 잔여물)을 깎고, 작은 부스러기 덩어리는 버려요
+    m = ndimage.binary_erosion(m, iterations=1)
+    lab, nl = ndimage.label(m)
+    if nl > 1:
+        sz = ndimage.sum(m, lab, range(1, nl + 1)); keep = np.isin(lab, 1 + np.where(sz >= max(30, sz.max() * .01))[0]); m &= keep
+    img[..., 3] = np.where(m, 255, 0)
     im = Image.fromarray(img, 'RGBA'); w, h = im.size
     nw, nh = max(1, round(w * scale)), max(1, round(h * scale))
     a = np.asarray(im).astype(float); pre = a.copy(); pre[..., :3] *= a[..., 3:4] / 255
-    small = np.asarray(Image.fromarray(pre.astype(np.uint8), 'RGBA').resize((nw, nh), Image.BOX)).astype(float)
-    al = small[..., 3]; out = np.zeros_like(small)
-    ok = al > 110; out[ok, :3] = np.clip(small[ok, :3] * 255 / np.maximum(al[ok, None], 1), 0, 255); out[ok, 3] = 255
+    small = np.asarray(Image.fromarray(pre.astype(np.uint8), 'RGBA').resize((nw, nh), Image.LANCZOS)).astype(float)
+    al = np.clip(small[..., 3], 0, 255); out = np.zeros_like(small)
+    ok = al > 24; out[ok, :3] = np.clip(small[ok, :3] * 255 / np.maximum(al[ok, None], 1), 0, 255); out[ok, 3] = al[ok]
     return out.astype(np.uint8)
 
 def build():
@@ -191,7 +199,7 @@ def build():
     for (cid, fn, name, mp, tile, lines, force) in SHEETS:
         rows = extract('chars_src/' + fn, fill_inside=SIDE.get(cid, {}).get('fill_inside', False))
         allf = [(ri, f) for ri, row in enumerate(rows) for f in row]
-        hmax = max(f['img'].shape[0] for _, f in allf); scale = TARGET / hmax
+        hmax = max(f['img'].shape[0] for _, f in allf); scale = TARGET * R / hmax
         groups = {d: [] for d in DIRS}
         if force:
             for ri, row in enumerate(rows): groups[force[ri]] += row
@@ -205,16 +213,16 @@ def build():
         # 한쪽 옆모습이 모자라면 반대쪽을 뒤집어 써요
         for a_, b_ in (('left', 'right'), ('right', 'left')):
             if len(groups[a_]) < 2 and len(groups[b_]) >= 2: groups[a_] = [dict(f, img=f['img'][:, ::-1]) for f in groups[b_]]
-        block = np.zeros((FH * 4, FW * 4, 4), np.uint8); counts = {}
+        block = np.zeros((FH * R * 4, FW * R * 4, 4), np.uint8); counts = {}; fw, fh = FW * R, FH * R
         for di, d in enumerate(DIRS):
             fs = groups[d][:4] or groups['down'][:1]
             counts[d] = len(fs)
             for k, f in enumerate(fs):
                 s = shrink(f['img'], scale); h, w = s.shape[:2]
-                if w > FW: s = s[:, (w - FW) // 2:(w - FW) // 2 + FW]; w = FW
-                if h > FH - 1: s = s[h - (FH - 1):]; h = FH - 1
-                ox, oy = (FW - w) // 2, di * FH + FH - 1 - h
-                dst = block[oy:oy + h, k * FW + ox:k * FW + ox + w]
+                if w > fw: s = s[:, (w - fw) // 2:(w - fw) // 2 + fw]; w = fw
+                if h > fh - R: s = s[h - (fh - R):]; h = fh - R
+                ox, oy = (fw - w) // 2, di * fh + fh - R - h
+                dst = block[oy:oy + h, k * fw + ox:k * fw + ox + w]
                 dst[:] = np.where(s[..., 3:4] > 0, s, dst)
         meta.append(dict(id=cid, name=name, map=mp, tile=tile, lines=lines, base=len(sheet_rows) * 4, n=counts,
                          found={d: len(groups[d]) for d in DIRS}))
@@ -228,17 +236,17 @@ if __name__ == '__main__':
     npc = Image.open('out/tk_npcs.png'); nj = json.load(open('out/tk_npcs.json'))
     for c in nj['chars']:
         if c['id'] != 'me': continue
-        block = Image.new('RGBA', (FW * 4, FH * 4), (0, 0, 0, 0))
+        block = Image.new('RGBA', (FW * R * 4, FH * R * 4), (0, 0, 0, 0))
         for di in range(4):
             for k in range(2):
-                fr = npc.crop((k * 24, c['row'] * 36, k * 24 + 24, c['row'] * 36 + 36)).resize((26, 39), Image.NEAREST)
+                fr = npc.crop((k * 24, c['row'] * 36, k * 24 + 24, c['row'] * 36 + 36)).resize((26 * R, 39 * R), Image.NEAREST)
                 if di == 3: fr = fr.transpose(Image.FLIP_LEFT_RIGHT)
-                block.paste(fr, (k * FW + 3, di * FH + FH - 40), fr)
+                block.paste(fr, ((k * FW + 3) * R, (di * FH + FH - 40) * R), fr)
         meta.append(dict(id=c['id'], name=c['name'], map=c['map'], tile=c['tile'], lines=c['lines'], base=len(blocks) * 4, n={d: 2 for d in DIRS}, found={}))
         blocks.append(np.asarray(block))
     sheet = np.concatenate(blocks, 0)
     Image.fromarray(sheet, 'RGBA').save('out/tk_chars.png')
-    json.dump(dict(FW=FW, FH=FH, dirs=DIRS, chars=meta), open('out/tk_chars.json', 'w'), ensure_ascii=False)
+    json.dump(dict(FW=FW, FH=FH, R=R, dirs=DIRS, chars=meta), open('out/tk_chars.json', 'w'), ensure_ascii=False)
     prev = Image.fromarray(sheet, 'RGBA'); bgp = Image.new('RGBA', prev.size, (60, 56, 80, 255)); bgp.alpha_composite(prev)
-    bgp.resize((prev.width * 3, prev.height * 3), Image.NEAREST).save('out/tk_chars_preview.png')
+    bgp.save('out/tk_chars_preview.png')
     print('sheet', sheet.shape)

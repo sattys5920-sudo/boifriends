@@ -232,9 +232,8 @@ function drawMouth(o, W, FW, m){   // o: ImageData.data (가로 W = FW×20)
 }
 
 // ---------- 주인공 아바타 (LPC 부품 조립: lpc_parts/, 작가·라이선스는 lpc/credits.json) ----------
-let AVD = null, AVC = null; const AVIMG = {}, AS = 32;   // AS: 줄인 한 칸 크기 (64칸 → 32칸)
-const CS = 0.72;   // 맵 위 캐릭터 크기 배율
-let CHS = null;   // CS만큼 줄인 캐릭터 시트
+let AVD = null, AVC = null; const AVIMG = {}, AS = 30;   // AS: 맵에서 아바타 한 칸 크기 (64칸 → 30칸)
+const CS = 0.6;   // 맵 위 캐릭터 크기 배율 (시트는 R배 고해상도라 화면 해상도로 부드럽게 줄여 그려요)
 const AV_ROWS = [['hair', '머리 모양'], ['hairC', '머리색', 'hair'], ['skinC', '피부색', 'skin'], ['eyeC', '눈 색', 'eye'], ['face', '표정'], ['lip', '입'],
   ['top', '상의'], ['topC', '상의 색', 'cloth'], ['legs', '하의'], ['legsC', '하의 색', 'bottom'], ['feet', '신발'], ['feetC', '신발 색', 'shoe'],
   ['acc', '안경·귀걸이'], ['accC', '장식 색', 'cloth'], ['neck', '목 장식'], ['neckC', '목 장식 색', 'cloth']];
@@ -625,9 +624,10 @@ function hud() {
 // ---------- 그리기 ----------
 // (fx, fy): 발밑 위치. 돌려주는 값은 머리 위 y
 function drawChar(ctx, c, dir, fi, fx, fy) {
-  if (c.av && AVC) { const col = AVD.dirs[dir] + (fi % 5), top = fy - Math.round(AS * 62 / 64); ctx.drawImage(AVC, col * AS, 0, AS, AS, fx - AS / 2, top, AS, AS); return top + Math.round(AS * .2); }
-  const di = CH.dirs.indexOf(dir), n = c.n[dir] || 1, w = Math.round(CH.FW * CS), h = Math.round(CH.FH * CS), top = fy - h + 2;
-  ctx.drawImage(CHS, (fi % n) * w, (c.base + di) * h, w, h, fx - Math.round(w / 2), top, w, h); return top; }
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  if (c.av && AVC) { const col = AVD.dirs[dir] + (fi % 5), top = fy - AS * 62 / 64; ctx.drawImage(AVC.big, col * 64, 0, 64, 64, fx - AS / 2, top, AS, AS); ctx.imageSmoothingEnabled = false; return Math.round(top + AS * .2); }
+  const R = CH.R || 1, di = CH.dirs.indexOf(dir), n = c.n[dir] || 1, w = CH.FW * CS, h = CH.FH * CS, top = fy - h + CS;
+  ctx.drawImage(CHIMG, (fi % n) * CH.FW * R, (c.base + di) * CH.FH * R, CH.FW * R, CH.FH * R, fx - w / 2, top, w, h); ctx.imageSmoothingEnabled = false; return Math.round(top); }
 function dirOf(dx, dy) { const sx = (dx - dy) * 2, sy = dx + dy; return Math.abs(sx) > Math.abs(sy) ? (sx > 0 ? 'right' : 'left') : (sy > 0 ? 'down' : 'up'); }
 function camera() {
   const Z = zoom(), logOpen = !$('logp').hidden, wide = innerWidth > 700, [px, py] = P(M, me.x, me.y);
@@ -678,7 +678,7 @@ function frame(now) {
     if (it.o) { const s = it.o.s; g.drawImage(IMG[map].obj, s[0], s[1], s[2], s[3], it.o.p[0] - cx, it.o.p[1] - cy, s[2], s[3]); continue; }
     const c = it.me ? PL : it.a, dir = it.me ? me.dir : c.dir, n = c.n[dir] || 1;
     const fi = it.me ? (moving && n > 1 ? 1 + Math.floor(walkT * 8) % (n - 1) : 0) : 0;
-    g.fillStyle = '#0006'; g.beginPath(); g.ellipse(it.sx - cx, it.sy - cy, 5, 2, 0, 0, 7); g.fill();
+    g.fillStyle = '#0006'; g.beginPath(); g.ellipse(it.sx - cx, it.sy - cy, 4, 1.6, 0, 0, 7); g.fill();
     const Y = drawChar(g, c, dir, fi, Math.round(it.sx - cx), Math.round(it.sy - cy));
     if (!it.me && RUN && c.id !== 'robot' && !(ST.chars[c.id] && ST.chars[c.id].simple)) {
       const r = RUN.rel[c.id], mark = !r || !r.mode ? '!' : r.day !== RUN.day ? (r.mode === 'love' ? '♥' : '♣') : '';
@@ -808,7 +808,7 @@ $('toTitle').addEventListener('click', () => { $('endp').hidden = true; RUN = nu
 (async () => {
   await document.fonts.load('13px Galmuri11').catch(() => {});
   if (window.claude && claude.use) await cloudInit(); else setCloud('local');
-  DATA = await (await fetch('data.json')).json(); CHIMG = await load('chars.png'); CH = DATA.chars; CHS = shrink(CHIMG, Math.round(CHIMG.width / CH.FW) * Math.round(CH.FW * CS), Math.round(CHIMG.height / CH.FH) * Math.round(CH.FH * CS)); ST = DATA.story;
+  DATA = await (await fetch('data.json')).json(); CHIMG = await load('chars.webp'); CH = DATA.chars; ST = DATA.story;
   META = Object.assign({ name: '', look: 'me', endings: {}, runs: 0, fails: 0 }, store.get('tkw_meta') || {}); META.name = '여니';
   AVD = await (await fetch('lpc/avatar.json')).json(); META.av = avFix(META.av);
   PL = Object.assign({}, charById('me'), { av: true, n: { down: 5, up: 5, left: 5, right: 5 } }); await avApply();
