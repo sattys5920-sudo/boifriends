@@ -22,7 +22,8 @@ const ITEMS = {
 const PRICE = { wall: 80, floor: 80, furn: 200, deco: 60, prop: 40 };
 const STAGES = [['첫 만남', 'first', 0], ['친구', 'friend', 25], ['썸', 'crush', 50], ['연인', 'lover', 75]];
 const stageOf = l => STAGES.filter(s => l >= s[2]).pop();
-const GACHA = 300, DUP = 150, TALK_MAX = 3;
+const GACHA = 300, DUP = 150, TALK_MAX = 3, LOVE_DAY = 4;   // 애정은 하루 최대 4 → 한 단계(25)에 약 일주일
+function addLove(o, n) { if (!o.lv || o.lv.day !== today()) o.lv = { day: today(), g: 0 }; const g = Math.max(0, Math.min(n, LOVE_DAY - o.lv.g)); o.lv.g += g; o.love = clamp(o.love + g); return g; }
 let CH = [], CHM = {}, TALK = {}, FR = {};
 
 function spr(cat, k, col, sc) {
@@ -76,6 +77,7 @@ function tickTime() {
     o.food = clamp(o.food - 6 * h); o.fun = clamp(o.fun - 4 * h); o.clean = clamp(o.clean - 3 * h);
     o.energy = clamp(o.energy + (o.sleeping ? 14 : -3) * h);
     if (o.sleeping && o.energy >= 100) o.sleeping = false;
+    if (o.food < 10 && o.fun < 10) o.love = clamp(o.love - 2 * h / 24);
   }
   S.last = now;
   if (S.day !== today()) { S.day = today(); S.coins += 100; toast('오늘의 출석 보너스 +100코인'); }
@@ -102,7 +104,7 @@ function meterHTML(o) {
   const st = stageOf(o.love), nx = STAGES[STAGES.indexOf(st) + 1];
   const m = (l, v, c) => `<div class="meter"><div class="row"><span>${l}</span><span>${v}</span></div><div class="bar"><i style="width:${v}%;background-color:${v < 30 ? '#ff9a8a' : c}"></i></div></div>`;
   return `<div class="meters">${m('배부름', o.food, '#ffd76a')}${m('기분', o.fun, '#8fe3cc')}${m('청결', o.clean, '#8ccff5')}${m('체력', o.energy, '#c6b5ff')}
-    <div class="meter wide"><div class="row"><span>애정 · ${st[0]}</span><span>${nx ? `다음 단계까지 ${nx[2] - o.love}` : '최고 단계'}</span></div><div class="bar"><i style="width:${o.love}%;background-color:#ff8fb3"></i></div></div></div>`;
+    <div class="meter wide"><div class="row"><span>애정 · ${st[0]}</span><span>${nx ? `다음 단계까지 ${nx[2] - o.love} · 오늘 +${o.lv && o.lv.day === today() ? o.lv.g : 0}/${LOVE_DAY}` : '최고 단계'}</span></div><div class="bar"><i style="width:${o.love}%;background-color:#ff8fb3"></i></div></div></div>`;
 }
 const ic = (act, img, label, pressed) => `<button class="ic" data-act="${act}" ${pressed ? 'aria-pressed="true"' : ''}><img src="assets/ui/ic_${img}.png" alt="">${label}</button>`;
 
@@ -230,7 +232,7 @@ function pDex() {
 }
 function pMenu() {
   return ['메뉴', `<div class="card" style="font-size:12px;line-height:1.8">아이디: <b>${esc(user.id)}</b><br>저장: ${fb ? '계정(서버) + 이 기기' : '이 기기에만 (서버 설정 전)'}</div>
-    <div class="card label" style="line-height:1.7">· 시간이 지나면 배부름·기분·청결·체력이 줄어요.<br>· 재우면 체력이 차요.<br>· 대화는 사람마다 하루 ${TALK_MAX}번. 애정 단계마다 대답이 달라져요.<br>· 돌보면 코인이 모여요. 매일 처음 들어오면 +100코인.</div>
+    <div class="card label" style="line-height:1.7">· 시간이 지나면 배부름·기분·청결·체력이 줄어요.<br>· 재우면 체력이 차요.<br>· 대화는 사람마다 하루 ${TALK_MAX}번. 애정 단계마다 대답이 달라져요.<br>· 애정은 하루 최대 +${LOVE_DAY}. 꾸준히 돌보면 일주일에 한 단계쯤 올라요.<br>· 너무 오래 굶기고 방치하면 애정이 조금 줄어요.<br>· 돌보면 코인이 모여요. 매일 처음 들어오면 +100코인.</div>
     <button class="btn white" data-act="logout">로그아웃</button>`];
 }
 
@@ -239,8 +241,8 @@ function act(kind) {
   const id = cur(), o = S.owned[id]; if (!o) return;
   const say = t => { sayText = t; };
   if (o.sleeping && kind !== 'sleep') { say('(자는 중이에요. 깨우려면 깨우기를 눌러요.)'); return render(); }
-  if (kind === 'feed') { if (o.food >= 95) say('(배불러서 더는 못 먹겠대요.)'); else { o.food = clamp(o.food + 25); o.love = clamp(o.love + 1); S.coins += 10; anim.heart = 10; say('(밥을 줬다. 배부름 +25 · 코인 +10)'); } }
-  if (kind === 'play') { if (o.energy < 15) say('(너무 지쳐서 못 놀겠대요. 재워 주세요.)'); else { o.fun = clamp(o.fun + 22); o.energy = clamp(o.energy - 12); o.love = clamp(o.love + 2); S.coins += 10; anim.heart = 10; anim.mode = 'hop'; anim.t = 10; say('(같이 놀았다. 기분 +22 · 코인 +10)'); } }
+  if (kind === 'feed') { if (o.food >= 95) say('(배불러서 더는 못 먹겠대요.)'); else { o.food = clamp(o.food + 25); addLove(o, 1); S.coins += 10; anim.heart = 10; say('(밥을 줬다. 배부름 +25 · 코인 +10)'); } }
+  if (kind === 'play') { if (o.energy < 15) say('(너무 지쳐서 못 놀겠대요. 재워 주세요.)'); else { o.fun = clamp(o.fun + 22); o.energy = clamp(o.energy - 12); addLove(o, 1); S.coins += 10; anim.heart = 10; anim.mode = 'hop'; anim.t = 10; say('(같이 놀았다. 기분 +22 · 코인 +10)'); } }
   if (kind === 'wash') { if (o.clean >= 95) say('(이미 반짝반짝해요.)'); else { o.clean = clamp(o.clean + 35); S.coins += 5; say('(깨끗해졌다. 청결 +35 · 코인 +5)'); } }
   if (kind === 'sleep') { o.sleeping = !o.sleeping; say(o.sleeping ? '(불을 껐다. 잘 자.)' : '(일어났다. 좋은 아침.)'); }
   if (kind === 'talk') {
@@ -249,7 +251,7 @@ function act(kind) {
     else {
       const lines = TALK[id][stageOf(o.love)[1]]; o.talk.i = (o.talk.i + 1) % lines.length; o.talk.n++;
       say(lines[o.talk.i].map(l => l.split('{call}').join(o.call)).join('\n'));
-      o.love = clamp(o.love + 4); o.fun = clamp(o.fun + 3); S.coins += 15; anim.heart = 12;
+      addLove(o, 1); o.fun = clamp(o.fun + 3); S.coins += 15; anim.heart = 12;
     }
   }
   save(); render();
