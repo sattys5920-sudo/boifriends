@@ -33,7 +33,7 @@ SIDE = {
     'izumi':          dict(left='mirror', right=[(2, 1), (2, 2), (3, 2), (3, 3)], fill_inside=True, phase=False, nofill=True),
     'ponytail':       dict(left=[(3, 0), (3, 1), (3, 2), (3, 3)], right=[(2, 1), (2, 2), (2, 3), (2, 4)]),
     'spiky':          dict(left=[(3, 0), (3, 1), (3, 2), (3, 3)], right=[(2, 1), (2, 2), (2, 3), (2, 4)], fill_frame=3),
-    'kyon':           dict(left=[(3, 0), (3, 1), (3, 2), (3, 3)], right=[(2, 1), (2, 2), (2, 3), (2, 4)]),
+    'kyon':           dict(left=[(3, 0), (3, 1), (3, 2), (3, 3)], right=[(2, 1), (2, 2), (2, 3), (2, 4)], fill_frame=9),
     'chiro':          dict(left=[(2, 0), (2, 1), (3, 1), (3, 2)], right=[(2, 2), (2, 3), (2, 4), (3, 3)]),
     'saiki':          dict(left=[(2, 1), (2, 2), (2, 3), (2, 4)], right=None),
     'nozaki':         dict(left=[(3, 0), (3, 1), (3, 2)], right=[(2, 0), (2, 1), (2, 3), (2, 4)]),
@@ -173,6 +173,18 @@ def extract(path, fill_inside=False, fill_frame=0, phase=False, nofill=False, ou
                 r = hl == i; n = r.sum()
                 if np.where(r)[0].min() > (r.shape[0]) * .62: continue   # 다리 사이 틈은 채우지 않아요
                 if g[r].sum() < max(2, n * .04) and (w[r].sum() < n * .9 or n < 400 * S * S or fill_frame): sub = sub | r
+                elif fill_frame:   # 체크무늬(회색 칸)가 섞인 덩어리여도, 회색 칸에서 멀리 떨어진 안쪽(셔츠 등)만 살려요
+                    far = r & ~ndimage.binary_dilation(g & r, iterations=int(13 * S))
+                    fl, fn = ndimage.label(far)
+                    for j in range(1, fn + 1):
+                        q = fl == j
+                        if q.sum() > 25 and (ndimage.binary_dilation(q, iterations=2) & sub).any(): sub = sub | q
+            if fill_frame:   # 몸 안에 완전히 갇힌 작은 구멍(재킷 안 셔츠 등)은 색과 상관없이 채워요
+                th = ndimage.binary_fill_holes(ndimage.binary_closing(sub, iterations=2)) & ~sub
+                tl, tn = ndimage.label(th)
+                for j2 in range(1, tn + 1):
+                    q = tl == j2
+                    if q.sum() < sub.sum() * .12: sub = sub | q
             m = m.copy(); m[bb] = sub
         if P:   # 이 프레임 주변 배경으로 체크 격자 위치를 맞춘 뒤, 격자 색과 안 맞는 픽셀(흰 셔츠 등)을 되살려요
             ys, xs = np.where(m); y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
@@ -396,7 +408,7 @@ def build():
             a &= ~kill
         # 배경에 닿은 작은 밝은 덩어리(흰 점·삐죽한 조각)는 어디에 있든 지워요. 셔츠·날개 같은 큰 흰 면은 그대로
         for _ in range(2):
-            bgm = ~a; touch = ndimage.binary_dilation(bgm, iterations=1)
+            outside = ndimage.binary_fill_holes(a) == False; touch = ndimage.binary_dilation(outside, iterations=1)
             ll, ln = ndimage.label(light & a)
             if ln:
                 sz = ndimage.sum(np.ones_like(ll), ll, range(1, ln + 1)); tc = ndimage.maximum(touch, ll, range(1, ln + 1))
