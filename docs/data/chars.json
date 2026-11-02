@@ -1206,11 +1206,12 @@
 "work": "???",
 "tag": "밝음 · 장난기 · 다정",
 "likes": [
-"놀리기",
-"챙겨 주기"
+"커피",
+"녹차",
+"타코야키"
 ],
 "dislikes": [
-"네가 밥 굶는 것"
+"단 것"
 ],
 "room": {
 "wp": "starnight",
@@ -1241,12 +1242,14 @@
 "창밖에 구름이 솜사탕 같아."
 ],
 "li": [
-"cocoa",
-"bear",
+"coffee",
+"tea",
 "takoyaki"
 ],
 "di": [
-"emptywallet"
+"cake",
+"candy",
+"choco"
 ]
 }
 ]
