@@ -125,8 +125,6 @@ input { font: inherit; }
   <div class="sheet-in">
     <h1>짝 찾기 산책</h1>
     <p class="lead">도쿄와 도와 왕국을 걸으며 사람들에게 말을 걸어요. 처음 만난 사람마다 <b>내가 사귈지</b>, <b>어울리는 짝을 찾아줄지</b> 정하고, 14일 안에 마음을 움직이세요. 기력이 바닥나면 쓰러져서 이번 회차는 끝나요. 이룬 엔딩은 도감에 남고, 엔딩 하나마다 다음 회차 용돈이 300엔씩 늘어나요.</p>
-    <label class="label" for="nameIn">내 이름</label>
-    <div class="field"><input id="nameIn" maxlength="8" autocomplete="off" placeholder="이름 (8자까지)"></div>
     <div class="label">내 모습 만들기 <span class="credit">(LPC 도트 · <a href="lpc/credits.json" target="_blank" rel="noopener">작가·라이선스</a>)</span></div>
     <div class="avmk">
       <div class="avprev"><canvas id="avPrev" width="54" height="54"></canvas><div class="row-btns"><button class="btn" type="button" id="avTurn">돌리기</button><button class="btn" type="button" id="avRand">랜덤</button></div></div>
@@ -234,7 +232,7 @@ function drawMouth(o, W, FW, m){   // o: ImageData.data (가로 W = FW×20)
 }
 
 // ---------- 주인공 아바타 (LPC 부품 조립: lpc_parts/, 작가·라이선스는 lpc/credits.json) ----------
-let AVD = null, AVC = null; const AVIMG = {}, AS = 54;   // AS: 줄인 한 칸 크기 (64칸 → 54칸, NPC와 키를 맞춰요)
+let AVD = null, AVC = null; const AVIMG = {}, AS = 44;   // AS: 줄인 한 칸 크기 (64칸 → 44칸)
 const AV_ROWS = [['hair', '머리 모양'], ['hairC', '머리색', 'hair'], ['skinC', '피부색', 'skin'], ['eyeC', '눈 색', 'eye'], ['face', '표정'], ['lip', '입'],
   ['top', '상의'], ['topC', '상의 색', 'cloth'], ['legs', '하의'], ['legsC', '하의 색', 'bottom'], ['feet', '신발'], ['feetC', '신발 색', 'shoe'],
   ['acc', '안경·귀걸이'], ['accC', '장식 색', 'cloth'], ['neck', '목 장식'], ['neckC', '목 장식 색', 'cloth']];
@@ -748,7 +746,6 @@ function renderAvRows() {
 }
 function drawAvPrev() { const c = $('avPrev'), x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.clearRect(0, 0, 54, 54); if (AVC) x.drawImage(AVC, AVD.dirs[['down', 'left', 'up', 'right'][avDir]] * AS, 0, AS, AS, 0, 0, 54, 54); }
 function showTitle() {
-  $('nameIn').value = META.name || '';
   renderAvRows();
   const saved = store.get('tkw_run'); $('contRun').hidden = !(saved && !saved.over);
   const dex = $('dex'); dex.innerHTML = ''; let n = 0;
@@ -787,8 +784,7 @@ function showTitle() {
   $('title').hidden = false;
 }
 async function startGame(fresh) {
-  const nm = $('nameIn').value.trim(); if (!nm) { $('nameIn').focus(); toast('이름을 적어 주세요.'); return; }
-  META.name = nm; store.set('tkw_meta', META);
+  META.name = '여니'; store.set('tkw_meta', META);
   $('title').hidden = true; $('endp').hidden = true; $('feed').innerHTML = '';
   if (fresh) { newRun(); await enter(DATA.home, null, true); }
   else { RUN = store.get('tkw_run'); renderLog(); await enter(RUN.map, RUN.at, true); }
@@ -799,12 +795,11 @@ $('avTurn').addEventListener('click', () => { avDir = (avDir + 1) % 4; drawAvPre
 $('avRand').addEventListener('click', () => { AV_ROWS.forEach(([k]) => { if (!['lip'].includes(k)) META.av[k] = Math.floor(Math.random() * avCount(k)); }); META.av.acc = Math.random() < .6 ? 0 : META.av.acc; META.av.neck = Math.random() < .6 ? 0 : META.av.neck; store.set('tkw_meta', META); renderAvRows(); });
 $('contRun').addEventListener('click', () => startGame(false));
 $('toTitle').addEventListener('click', () => { $('endp').hidden = true; RUN = null; showTitle(); });
-$('nameIn').addEventListener('keydown', e => { if (e.key === 'Enter') startGame(true); });
 (async () => {
   await document.fonts.load('13px Galmuri11').catch(() => {});
   if (window.claude && claude.use) await cloudInit(); else setCloud('local');
   DATA = await (await fetch('data.json')).json(); CHIMG = await load('chars.png'); CH = DATA.chars; ST = DATA.story;
-  META = Object.assign({ name: '', look: 'me', endings: {}, runs: 0, fails: 0 }, store.get('tkw_meta') || {});
+  META = Object.assign({ name: '', look: 'me', endings: {}, runs: 0, fails: 0 }, store.get('tkw_meta') || {}); META.name = '여니';
   AVD = await (await fetch('lpc/avatar.json')).json(); META.av = avFix(META.av);
   PL = Object.assign({}, charById('me'), { av: true, n: { down: 5, up: 5, left: 5, right: 5 } }); await avApply();
   await enter(DATA.home, null, true);
