@@ -24,12 +24,13 @@ const STAGES = [['첫 만남', 'first', 0], ['친구', 'friend', 25], ['썸', 'c
 const stageOf = l => STAGES.filter(s => l >= s[2]).pop();
 const GACHA = 300, DUP = 150, TALK_MAX = 3, LOVE_DAY = 4;   // 애정은 하루 최대 4 → 한 단계(25)에 약 일주일
 function addLove(o, n) { if (!o.lv || o.lv.day !== today()) o.lv = { day: today(), g: 0 }; const g = Math.max(0, Math.min(n, LOVE_DAY - o.lv.g)); o.lv.g += g; o.love = clamp(o.love + g); return g; }
-let CH = [], CHM = {}, TALK = {}, FR = {};
+let CH = [], CHM = {}, TALK = {}, FR = {}, IT = [], ITM = {};
 
 function spr(cat, k, col, sc) {
   const S = SHEET[cat], L = ITEMS[cat], i = Math.max(0, L.findIndex(x => x[0] === k)), it = L[i];
   return `<div class="clip" style="width:${it[2] * sc}px;height:${it[3] * sc}px;POS"><img class="px" src="assets/decor/${cat}.png" alt="" style="width:${S.sw * sc}px;height:${S.sh * sc}px;margin-left:${-col * S.cw * sc}px;margin-top:${-i * S.ch * sc}px"></div>`;
 }
+const icon = (k, sz) => `<span class="itm" style="width:${sz}px;height:${sz}px"><img class="px" src="assets/ui/items.png" alt="" style="width:${IT.length * sz}px;height:${sz}px;margin-left:${-ITM[k].i * sz}px"></span>`;
 const face = (id, w) => { const s = w / 96; return `<img class="px" src="assets/ch/${id}.webp" alt="" style="position:absolute;width:${384 * s}px;height:${528 * s}px;left:${-(96 * s - w) / 2}px;top:0;max-width:none">`; };
 
 // ---------- 저장 ----------
@@ -104,7 +105,7 @@ function meterHTML(o) {
   const st = stageOf(o.love), nx = STAGES[STAGES.indexOf(st) + 1];
   const m = (l, v, c) => `<div class="meter"><div class="row"><span>${l}</span><span>${v}</span></div><div class="bar"><i style="width:${v}%;background-color:${v < 30 ? '#ff9a8a' : c}"></i></div></div>`;
   return `<div class="meters">${m('배부름', o.food, '#ffd76a')}${m('기분', o.fun, '#8fe3cc')}${m('청결', o.clean, '#8ccff5')}${m('체력', o.energy, '#c6b5ff')}
-    <div class="meter wide"><div class="row"><span>애정 · ${st[0]}</span><span>${nx ? `다음 단계까지 ${nx[2] - o.love} · 오늘 +${o.lv && o.lv.day === today() ? o.lv.g : 0}/${LOVE_DAY}` : '최고 단계'}</span></div><div class="bar"><i style="width:${o.love}%;background-color:#ff8fb3"></i></div></div></div>`;
+    <div class="meter wide"><div class="row"><span>애정</span><span>${st[0]}</span></div><div class="bar"><i style="width:${o.love}%;background-color:#ff8fb3"></i></div></div></div>`;
 }
 const ic = (act, img, label, pressed) => `<button class="ic" data-act="${act}" ${pressed ? 'aria-pressed="true"' : ''}><img src="assets/ui/ic_${img}.png" alt="">${label}</button>`;
 
@@ -116,9 +117,9 @@ function render() {
     <div class="brand"><img src="assets/ui/ic_heart.png" alt="">BOIFRIENDS POCKET</div>
     <div class="topbar"><button class="who" data-act="who" aria-label="돌볼 사람 바꾸기"><span class="face">${face(id, 32)}</span><span>${esc(nameOf(id))}</span><img src="assets/ui/ic_back.png" alt="" style="width:14px;transform:rotate(-90deg)"></button>
       <span class="pill coin"><img src="assets/ui/ic_coin.png" alt="">${S.coins.toLocaleString('ko-KR')}</span></div>
-    <div class="icons">${ic('feed', 'food', '밥')}${ic('play', 'play', '놀기')}${ic('wash', 'wash', '씻기')}${ic('sleep', 'sleep', o.sleeping ? '깨우기' : '재우기', o.sleeping)}${ic('talk', 'talk', '대화')}</div>
+    <div class="icons">${ic('give', 'food', '주기')}${ic('play', 'play', '놀기')}${ic('wash', 'wash', '씻기')}${ic('sleep', 'sleep', o.sleeping ? '깨우기' : '재우기', o.sleeping)}${ic('talk', 'talk', '대화')}</div>
     <div class="lcd">${roomHTML(id, o)}</div>
-    <div class="say"><b>${esc(nameOf(id))} <span>오늘 대화 ${t}/${TALK_MAX} · 나를 “${esc(o.call)}”(이)라고 불러요</span></b><span id="say">${esc(sayText || defaultSay(id, o))}</span></div>
+    <div class="say"><b>${esc(nameOf(id))} <span>${'♥'.repeat(TALK_MAX - t)}</span></b><span id="say">${esc(sayText || defaultSay(id, o))}</span></div>
     ${meterHTML(o)}
     <div class="icons">${ic('profile', 'heart', '프로필')}${ic('decor', 'decor', '꾸미기')}${ic('gacha', 'gacha', '가챠')}${ic('dex', 'dex', '도감')}${ic('menu', 'home', '메뉴')}</div>
     <div class="abc"><button class="round" data-act="prev" aria-label="이전 사람">◀</button><button class="round b" data-act="talk" aria-label="말 걸기">♥</button><button class="round" data-act="next" aria-label="다음 사람">▶</button></div>
@@ -127,14 +128,13 @@ function render() {
 }
 function shellEmpty() {
   return `<div class="shell"><div class="brand"><img src="assets/ui/ic_heart.png" alt="">BOIFRIENDS POCKET</div>
-    <div class="lcd"><div class="room" style="background-color:#cfeaff;display:flex;align-items:center;justify-content:center"><span style="background:#fff;border:3px solid var(--ink);border-radius:12px;padding:8px 12px;font-size:12px;text-align:center;line-height:1.6">아직 아무도 없어요.<br>가챠를 돌려 첫 남자친구를 만나요!</span></div></div>
-    <button class="btn yellow" data-act="gacha" style="width:100%">첫 가챠 돌리기</button></div>`;
+    <div class="lcd"><div class="room" style="background-color:#cfeaff"></div></div>
+    <button class="btn yellow" data-act="gacha" style="width:100%"><img src="assets/ui/ic_gacha.png" alt="" style="width:20px;vertical-align:-4px"> 가챠</button></div>`;
 }
 function defaultSay(id, o) {
-  if (o.sleeping) return '(쿨쿨 자고 있어요. 체력이 차는 중.)';
-  if (o.food < 30) return '(배가 고파 보여요. 밥을 주세요.)';
-  if (o.clean < 30) return '(좀 씻겨야 할 것 같아요.)';
-  return id === 'hidden' ? '(말 걸어 볼까요? ♥ 버튼이나 대화를 눌러요.)' : `(${CHM[id].tag}. 말 걸어 볼까요?)`;
+  if (o.sleeping) return '(쿨쿨…)';
+  if (o.food < 30) return '(꼬르륵…)';
+  return '';
 }
 
 // ---------- 시작 화면 ----------
@@ -142,7 +142,7 @@ let startMode = 'join';
 function renderStart() {
   app.innerHTML = `<div class="start">
     <div class="egg"><div class="scr"><img src="assets/ui/ic_heart.png" alt="" style="width:40px;margin-bottom:18px"></div></div>
-    <div style="text-align:center"><h1>보이프렌즈 포켓</h1><div class="note">주머니 속 남자친구를 키워 보세요</div></div>
+    <div style="text-align:center"><h1>보이프렌즈 포켓</h1></div>
     <div class="card" style="width:100%;padding:0;overflow:hidden">
       <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:3px solid var(--ink)">
         <button data-act="mode-join" style="height:44px;border:0;font-weight:700;background:${startMode === 'join' ? 'var(--yellow)' : '#fff'}">가입하기</button>
@@ -152,7 +152,7 @@ function renderStart() {
         <label class="label" for="pw">비밀번호</label><input class="field" id="pw" name="pw" type="password" autocomplete="${startMode === 'join' ? 'new-password' : 'current-password'}" required minlength="6" placeholder="6자 이상">
         <button class="btn" type="submit" style="margin-top:6px">${startMode === 'join' ? `가입하고 ${GACHA}코인 받기` : '로그인'}</button>
       </form></div>
-    <div class="note">${fb ? '로그인하면 이 기기와 계정 모두에 저장돼요.<br>폰을 바꿔도 같은 아이디로 이어서 할 수 있어요.' : (window.FIREBASE_CONFIG ? '서버에 연결하지 못해서 지금은 이 기기에만 저장돼요. 잠시 후 새로고침해 보세요.' : '지금은 서버 설정 전이라 이 기기에만 저장돼요.')}</div>
+    ${fb ? '' : '<div class="note">오프라인 · 이 기기에만 저장</div>'}
   </div>`;
   $('#auth').onsubmit = async e => {
     e.preventDefault(); const id = $('#uid').value.trim(), pw = $('#pw').value;
@@ -174,7 +174,7 @@ function openPanel(k, extra) { panel = Object.assign({ k }, extra || {}); render
 function closePanel() { if (!Object.keys(S.owned).length) return; panel = null; document.querySelector('.sheet')?.remove(); render(); }
 function renderPanel() {
   document.querySelector('.sheet')?.remove();
-  const f = { who: pWho, profile: pProfile, decor: pDecor, gacha: pGacha, dex: pDex, menu: pMenu }[panel.k];
+  const f = { who: pWho, profile: pProfile, decor: pDecor, gacha: pGacha, dex: pDex, menu: pMenu, give: pGive }[panel.k];
   const [title, body] = f();
   const el = document.createElement('div'); el.className = 'sheet';
   el.innerHTML = `<div class="panel" role="dialog" aria-label="${esc(title)}"><div class="phead"><h2>${esc(title)}</h2>${Object.keys(S.owned).length ? '<button class="close" data-act="close" aria-label="닫기"><img src="assets/ui/ic_back.png" alt=""></button>' : `<span class="pill coin"><img src="assets/ui/ic_coin.png" alt="">${S.coins}</span>`}</div><div class="pbody">${body}</div></div>`;
@@ -193,10 +193,14 @@ function pProfile() {
       <div style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div style="font-size:16px;font-weight:700">${esc(nameOf(id))}</div><div class="label">${esc(c.work)} · ${esc(c.tag)}</div></div><span class="pill">${stageOf(o.love)[0]} · ${o.love}</span></div></div>
     <form id="callf" class="card" style="display:flex;flex-direction:column;gap:6px">
       ${id === 'hidden' ? `<label class="label" for="hname">이 사람의 이름</label><input class="field" id="hname" maxlength="8" value="${esc(o.name || '')}" placeholder="이름을 지어 주세요">` : ''}
-      <label class="label" for="call">나를 부르는 이름</label><div style="display:flex;gap:8px"><input class="field" id="call" maxlength="8" value="${esc(o.call)}"><button class="btn" type="submit">저장</button></div>
-      <span class="label">사람마다 따로 정할 수 있어요. 대사 속 호칭이 이 이름으로 바뀌어요.</span></form>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="card" style="background:var(--mint2)"><b style="font-size:11px">좋아하는 것</b><div style="font-size:12px;line-height:1.7;margin-top:4px">${c.likes.map(esc).join('<br>')}</div></div>
-      <div class="card" style="background:var(--pink2)"><b style="font-size:11px">싫어하는 것</b><div style="font-size:12px;line-height:1.7;margin-top:4px">${c.dislikes.map(esc).join('<br>')}</div></div></div>`];
+      <label class="label" for="call">나를 부르는 이름</label><div style="display:flex;gap:8px"><input class="field" id="call" maxlength="8" value="${esc(o.call)}"><button class="btn" type="submit">저장</button></div></form>
+    ${slots('좋아하는 것', c.li, (o.known || {}).l || [], 'var(--mint2)')}${slots('싫어하는 것', c.di, (o.known || {}).d || [], 'var(--pink2)')}`];
+}
+function slots(title, all, found, bg) {
+  if (!all.length) return '';
+  return `<div class="card" style="background:${bg}"><b style="font-size:11px">${title}</b><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">${all.map(k => found.includes(k)
+    ? `<span style="display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px">${icon(k, 40)}${esc(ITM[k].n)}</span>`
+    : `<span style="width:44px;height:44px;border:2px dashed var(--ink2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--ink2)">?</span>`).join('')}</div></div>`;
 }
 function pDecor() {
   const id = cur(), o = S.owned[id], r = o.room, tab = panel.tab || 'wall', slot = panel.slot || 'a';
@@ -220,19 +224,34 @@ function pDecor() {
 function pGacha() {
   const first = !Object.keys(S.owned).length;
   return [first ? '첫 남자친구 뽑기' : '남자친구 가챠', `
-    ${first ? `<div class="card" style="text-align:center;font-size:12px;line-height:1.6">처음 받은 ${GACHA}코인으로 한 번 돌려 보세요.<br>나온 사람이 첫 번째 남자친구가 돼요.</div>` : ''}
     <div class="machine" id="machine"><img class="m px" src="assets/ui/machine.png" alt="가챠 기계"><button class="knob" data-act="pull" aria-label="손잡이 돌리기"></button></div>
-    <button class="btn yellow" data-act="pull" ${S.coins < GACHA ? 'disabled' : ''}>손잡이 돌리기 · ${GACHA}코인</button>
-    <div class="card label" style="line-height:1.7">25명 중 한 명이 나와요. 이미 만난 사람이 또 나오면 ${DUP}코인을 돌려받아요.<br>아주 낮은 확률로 히든 캐릭터가 나와요. 이름은 직접 지어 줄 수 있어요.<br>코인은 돌보기·대화와 매일 출석으로 모여요.</div>`];
+    <button class="btn yellow" data-act="pull" ${S.coins < GACHA ? 'disabled' : ''}><img src="assets/ui/ic_coin.png" alt="" style="width:16px;vertical-align:-3px"> ${GACHA}</button>`];
 }
 function pDex() {
   const all = CH, met = all.filter(c => S.owned[c.id]).length;
   return ['도감', `<div class="card"><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700"><span>만난 사람</span><span>${met} / ${all.length}</span></div><div class="bar" style="margin-top:6px"><i style="width:${met / all.length * 100}%;background-color:var(--mint)"></i></div></div>
     <div class="grid4">${all.map(c => { const o = S.owned[c.id]; return `<div class="tile"><div class="pic">${o ? face(c.id, 72).replace('position:absolute;', 'position:absolute;') : '<div class="sil"><i class="h"></i><i class="bd">?</i></div>'}</div><span style="color:${o ? 'inherit' : 'var(--ink2)'}">${o ? esc(nameOf(c.id)) : '???'}</span>${o ? `<span class="label">${stageOf(o.love)[0]}</span>` : ''}</div>`; }).join('')}</div>`];
 }
+function pGive() {
+  const tab = panel.tab || 'food';
+  const tabs = [['food', '먹을 것'], ['gift', '선물']].map(t => `<button class="tab" role="tab" aria-selected="${t[0] === tab}" data-act="gtab" data-v="${t[0]}">${t[1]}</button>`).join('');
+  const base = tab === 'food' ? `<button class="item" data-act="feed"><div class="th"><img class="px" src="assets/ui/ic_food.png" alt="" style="width:40px"></div><span>밥</span><small>무료</small></button>` : '';
+  return ['주기', `<div class="tabs" role="tablist">${tabs}</div><div class="tabbody"><div class="grid4">${base}${IT.filter(x => x.t === tab).map(x => `<button class="item" data-act="giveit" data-v="${x.k}"><div class="th">${icon(x.k, 40)}</div><span>${esc(x.n)}</span><small><img src="assets/ui/ic_coin.png" alt="" style="width:10px;vertical-align:-1px"> ${x.p}</small></button>`).join('')}</div></div>`];
+}
+function give(k) {
+  const id = cur(), o = S.owned[id], it = ITM[k], c = CHM[id];
+  if (S.coins < it.p) return toast('코인이 부족해요.');
+  if (o.food >= 95 && it.t === 'food') return toast('배불러서 못 먹겠대요.');
+  S.coins -= it.p; o.known = o.known || { l: [], d: [] };
+  if (it.t === 'food') o.food = clamp(o.food + 18); else o.fun = clamp(o.fun + 15);
+  let msg;
+  if (c.li.includes(k)) { addLove(o, 2); anim.heart = 16; if (!o.known.l.includes(k)) o.known.l.push(k); msg = `(${it.n}! 눈이 반짝였다 ♥)`; }
+  else if (c.di.includes(k)) { o.love = clamp(o.love - 1); anim.angry = 16; if (!o.known.d.includes(k)) o.known.d.push(k); msg = `(${it.n}… 표정이 굳었다)`; }
+  else { addLove(o, 1); msg = `(${it.n}, 고마워)`; }
+  sayText = msg; panel = null; document.querySelector('.sheet')?.remove(); save(); render();
+}
 function pMenu() {
-  return ['메뉴', `<div class="card" style="font-size:12px;line-height:1.8">아이디: <b>${esc(user.id)}</b><br>저장: ${fb ? '계정(서버) + 이 기기' : '이 기기에만'}</div>
-    <div class="card label" style="line-height:1.7">· 시간이 지나면 배부름·기분·청결·체력이 줄어요.<br>· 재우면 체력이 차요.<br>· 대화는 사람마다 하루 ${TALK_MAX}번. 애정 단계마다 대답이 달라져요.<br>· 애정은 하루 최대 +${LOVE_DAY}. 꾸준히 돌보면 일주일에 한 단계쯤 올라요.<br>· 너무 오래 굶기고 방치하면 애정이 조금 줄어요.<br>· 돌보면 코인이 모여요. 매일 처음 들어오면 +100코인.</div>
+  return ['메뉴', `<div class="card" style="font-size:13px"><b>${esc(user.id)}</b></div>
     <button class="btn white" data-act="logout">로그아웃</button>`];
 }
 
@@ -240,14 +259,14 @@ function pMenu() {
 function act(kind) {
   const id = cur(), o = S.owned[id]; if (!o) return;
   const say = t => { sayText = t; };
-  if (o.sleeping && kind !== 'sleep') { say('(자는 중이에요. 깨우려면 깨우기를 눌러요.)'); return render(); }
-  if (kind === 'feed') { if (o.food >= 95) say('(배불러서 더는 못 먹겠대요.)'); else { o.food = clamp(o.food + 25); addLove(o, 1); S.coins += 10; anim.heart = 10; say('(밥을 줬다. 배부름 +25 · 코인 +10)'); } }
-  if (kind === 'play') { if (o.energy < 15) say('(너무 지쳐서 못 놀겠대요. 재워 주세요.)'); else { o.fun = clamp(o.fun + 22); o.energy = clamp(o.energy - 12); addLove(o, 1); S.coins += 10; anim.heart = 10; anim.mode = 'hop'; anim.t = 10; say('(같이 놀았다. 기분 +22 · 코인 +10)'); } }
-  if (kind === 'wash') { if (o.clean >= 95) say('(이미 반짝반짝해요.)'); else { o.clean = clamp(o.clean + 35); S.coins += 5; say('(깨끗해졌다. 청결 +35 · 코인 +5)'); } }
-  if (kind === 'sleep') { o.sleeping = !o.sleeping; say(o.sleeping ? '(불을 껐다. 잘 자.)' : '(일어났다. 좋은 아침.)'); }
+  if (o.sleeping && kind !== 'sleep') { say('(쿨쿨…)'); return render(); }
+  if (kind === 'feed') { if (o.food >= 95) say('(배불러…)'); else { o.food = clamp(o.food + 25); addLove(o, 1); S.coins += 10; anim.heart = 10; say('(냠냠)'); } }
+  if (kind === 'play') { if (o.energy < 15) say('(피곤해…)'); else { o.fun = clamp(o.fun + 22); o.energy = clamp(o.energy - 12); addLove(o, 1); S.coins += 10; anim.heart = 10; anim.mode = 'hop'; anim.t = 10; say('(신난다!)'); } }
+  if (kind === 'wash') { if (o.clean >= 95) say('(반짝반짝)'); else { o.clean = clamp(o.clean + 35); S.coins += 5; say('(뽀득뽀득)'); } }
+  if (kind === 'sleep') { o.sleeping = !o.sleeping; say(o.sleeping ? '(잘 자)' : '(좋은 아침)'); }
   if (kind === 'talk') {
     if (o.talk.day !== today()) o.talk = { day: today(), n: 0, i: o.talk.i };
-    if (o.talk.n >= TALK_MAX) say('(오늘은 충분히 이야기했어요. 내일 또 말 걸어 봐요.)');
+    if (o.talk.n >= TALK_MAX) say('(내일 또 얘기하자.)');
     else {
       const lines = TALK[id][stageOf(o.love)[1]]; o.talk.i = (o.talk.i + 1) % lines.length; o.talk.n++;
       say(lines[o.talk.i].map(l => l.split('{call}').join(o.call)).join('\n'));
@@ -276,7 +295,7 @@ function reveal(id, dup) {
       <span class="badge" style="${dup ? 'background:#fff' : hid ? 'background:var(--yellow)' : ''}">${dup ? '또 만났다!' : hid ? 'HIDDEN ✦' : 'NEW!'}</span>
       <div style="width:120px;height:165px;margin-bottom:10px;overflow:hidden;position:relative">${face(id, 120)}</div></div>
     <div class="rbody"><div class="nm">${hid && !dup ? '???' : esc(nameOf(id))}</div><div class="label">${esc(c.work)}</div><div style="font-size:13px;line-height:1.55">“${esc(c.gacha)}”</div>
-      ${dup ? `<span class="pill coin">이미 만난 사람 · 코인 +${DUP}</span>` : ''}
+      ${dup ? `<span class="pill coin"><img src="assets/ui/ic_coin.png" alt=""> +${DUP}</span>` : ''}
       ${hid && !dup ? `<label class="label" for="hn" style="align-self:flex-start">이 사람의 이름</label><input class="field" id="hn" maxlength="8" placeholder="이름을 지어 주세요">` : ''}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%"><button class="btn white" data-r="again">한 번 더</button><button class="btn" data-r="go">방으로 가기</button></div></div></div>`;
   document.body.appendChild(el);
@@ -293,9 +312,11 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if (!b) return;
   const a = b.dataset.act, v = b.dataset.v;
   if (a === 'mode-join' || a === 'mode-login') { startMode = a.slice(5); return renderStart(); }
-  if (['feed', 'play', 'wash', 'sleep', 'talk'].includes(a)) return act(a);
+  if (['feed', 'play', 'wash', 'sleep', 'talk'].includes(a)) { if (a === 'feed') { panel = null; document.querySelector('.sheet')?.remove(); } return act(a); }
   if (a === 'prev' || a === 'next') { const ids = Object.keys(S.owned), i = ids.indexOf(cur()); S.cur = ids[(i + (a === 'next' ? 1 : ids.length - 1)) % ids.length]; sayText = null; save(); return render(); }
-  if (['who', 'profile', 'decor', 'gacha', 'dex', 'menu'].includes(a)) return openPanel(a);
+  if (['who', 'profile', 'decor', 'gacha', 'dex', 'menu', 'give'].includes(a)) return openPanel(a);
+  if (a === 'gtab') { panel.tab = v; return renderPanel(); }
+  if (a === 'giveit') return give(v);
   if (a === 'close') return closePanel();
   if (a === 'pick') { S.cur = b.dataset.id; sayText = null; save(); panel = null; document.querySelector('.sheet')?.remove(); return render(); }
   if (a === 'logout') { panel = null; document.querySelector('.sheet')?.remove(); return logOut(); }
@@ -327,7 +348,8 @@ setInterval(() => {
   const img = man.firstElementChild; img.style.marginLeft = -col * 66 + 'px'; img.style.marginTop = -row * 91 + 'px';
   man.style.left = left; man.style.transform = sl ? 'rotate(-90deg) translateX(-14px)' : ''; man.classList.toggle('hop', A.mode === 'hop' && !sl);
   $('#shd').style.left = `calc(50% + ${x * 38}% - 27px)`;
-  const emo = $('#emo'), e = sl ? ['Z z z', '#5b6bd6'] : A.heart > 0 ? ['♥ ♥', '#e0457b'] : o.food < 40 ? ['꼬르륵…', '#c47a1a'] : o.clean < 35 ? ['킁킁…', '#5b8a3c'] : o.fun > 75 ? ['♪', '#2f8f73'] : null;
+  if (A.angry > 0) A.angry--;
+  const emo = $('#emo'), e = sl ? ['Z z z', '#5b6bd6'] : A.angry > 0 ? ['…!?', '#c0392b'] : A.heart > 0 ? ['♥ ♥', '#e0457b'] : o.food < 40 ? ['꼬르륵…', '#c47a1a'] : o.clean < 35 ? ['킁킁…', '#5b8a3c'] : o.fun > 75 ? ['♪', '#2f8f73'] : null;
   emo.hidden = !e; if (e) { emo.textContent = e[0]; emo.style.color = e[1]; emo.style.left = `calc(50% + ${x * 38}% + 14px)`; emo.style.bottom = sl ? '30%' : '52%'; }
   const mum = $('#mum'), mt = !sl && A.mum >= 0 ? CHM[id].mumble[A.mum] : '';
   mum.hidden = !mt; if (mt) { mum.textContent = mt; mum.style.left = `clamp(4px, calc(50% + ${x * 38}% - 70px), calc(100% - 64%))`; }
@@ -337,8 +359,8 @@ setInterval(() => { if (S && user) { tickTime(); save(); } }, 60000);
 // ---------- 시작 ----------
 (async () => {
   app.innerHTML = '<div class="start"><div class="egg"><div class="scr"></div></div><div class="note">불러오는 중…</div></div>';
-  const [c, t, f] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json'].map(u => fetch(u).then(r => r.json())));
-  CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f;
+  const [c, t, f, it] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json'].map(u => fetch(u).then(r => r.json())));
+  CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x]));
   try { await initFirebase(); } catch (e) { console.warn('Firebase 연결 실패, 기기 저장으로', e); fb = null; }
   if (fb) {
     fb.AU.onAuthStateChanged(fb.auth, async u => { if (u && !user) { user = { uid: u.uid, id: u.email.split('@')[0] }; await enter(); } else if (!u) { user = null; render(); } });

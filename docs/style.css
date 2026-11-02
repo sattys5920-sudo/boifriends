@@ -76,7 +76,7 @@ img,.px{image-rendering:pixelated;image-rendering:crisp-edges}
 .close img{width:22px;height:22px}
 .pbody{overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-bottom:4px}
 .card{background:var(--white);border:3px solid var(--ink);border-radius:14px;padding:10px 12px;box-shadow:0 3px 0 var(--ink)}
-.btn{height:46px;border-radius:12px;border:3px solid var(--ink);background:var(--mint);box-shadow:0 3px 0 var(--ink);font-size:14px;font-weight:700;padding:0 14px}
+.btn{white-space:nowrap;height:46px;border-radius:12px;border:3px solid var(--ink);background:var(--mint);box-shadow:0 3px 0 var(--ink);font-size:14px;font-weight:700;padding:0 14px}
 .btn.white{background:var(--white)}
 .btn.yellow{background:var(--yellow)}
 .btn:disabled{opacity:.5}
@@ -132,3 +132,5 @@ img,.px{image-rendering:pixelated;image-rendering:crisp-edges}
 .note{font-size:11px;line-height:1.6;color:var(--ink2);text-align:center}
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:50;background:var(--ink);color:#fff;border-radius:12px;padding:8px 14px;font-size:12px;max-width:90vw;text-align:center}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.itm{display:inline-block;overflow:hidden;position:relative}
+.itm img{display:block;max-width:none;image-rendering:pixelated}
