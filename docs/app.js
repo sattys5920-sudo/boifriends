@@ -125,7 +125,7 @@ function roomHTML(id, o, scale) {
     <div class="floor" style="background-color:${PAL[r.fc][1]};background-image:${tileUrl('floor', r.fl)}"></div>
     ${slot('deco', r.dc, 'left:6%;top:6%')}${slot('furn', r.a, 'left:3%;bottom:20%')}${slot('furn', r.b, 'right:3%;bottom:20%')}${slot('prop', r.pr, 'left:28%;bottom:4%;z-index:2')}
     ${id && o.sleeping ? sleepHTML(id, r) : ''}${id && o.job ? `<div style="position:absolute;left:50%;top:38%;transform:translateX(-50%);z-index:5;background:#fff;border:3px solid var(--ink);border-radius:10px;padding:6px 10px;font-size:11px;text-align:center;line-height:1.5"><img src="assets/ui/ic_job.png" alt="" style="width:18px;vertical-align:-4px"> ${esc(JOB_NAME[id])} 알바 중<br><b id="jobleft">${timeLeft(o.job.until)}</b></div>` : ''}
-    ${id ? `<div class="shadow" id="shd"></div><div class="man" id="man"><img class="px" src="assets/ch/${id}.webp?v=15" alt="${esc(nameOf(id))}"></div><span class="emo" id="emo" hidden></span><span class="mumble" id="mum" hidden></span>` : ''}
+    ${id ? `<div class="shadow" id="shd" ${o.sleeping || o.job ? 'style="display:none"' : ''}></div><div class="man" id="man" ${o.sleeping || o.job ? 'style="display:none"' : ''}><img class="px" src="assets/ch/${id}.webp?v=15" alt="${esc(nameOf(id))}"></div><span class="emo" id="emo" hidden></span><span class="mumble" id="mum" hidden></span>` : ''}
     ${o.sleeping ? '<div class="night"></div>' : ''}
   </div>`;
 }
@@ -272,6 +272,8 @@ function pGive() {
 }
 function give(k) {
   const id = cur(), o = S.owned[id], it = ITM[k], c = CHM[id];
+  if (o.sleeping) { panel = null; document.querySelector('.sheet')?.remove(); return toast('자는 중이라 못 해요. 깨우려면 깨우기를 눌러요.'); }
+  if (o.job) { panel = null; document.querySelector('.sheet')?.remove(); return toast('알바 중이라 못 해요.'); }
   if (S.coins < it.p) return toast('코인이 부족해요.');
   if (o.food >= 95 && it.t === 'food') return toast('배불러서 못 먹겠대요.');
   S.coins -= it.p; o.known = o.known || { l: [], d: [] };
@@ -339,8 +341,8 @@ function pMenu() {
 function act(kind) {
   const id = cur(), o = S.owned[id]; if (!o) return;
   const say = t => { sayText = t; };
-  if (o.job) { say('(알바 갔어요)'); return render(); }
-  if (o.sleeping && kind !== 'sleep') { say('(쿨쿨....)'); return render(); }
+  if (o.job) { toast('알바 중이라 못 해요.'); return; }
+  if (o.sleeping && kind !== 'sleep') { toast('자는 중이라 못 해요. 깨우려면 깨우기를 눌러요.'); return; }
   if (kind === 'feed') { if (o.food >= 95) say('(배불러....)'); else { o.food = clamp(o.food + 25); addLove(o, 1); S.coins += 15; anim.heart = 10; say('(냠냠)'); } }
   if (kind === 'play') { if (o.energy < 15) say('(피곤해....)'); else { o.fun = clamp(o.fun + 22); o.energy = clamp(o.energy - 12); addLove(o, 1); S.coins += 15; anim.heart = 10; anim.mode = 'hop'; anim.t = 10; say('(신난다!)'); } }
   if (kind === 'wash') { if (o.clean >= 95) say('(반짝반짝)'); else { o.clean = clamp(o.clean + 35); S.coins += 10; say('(뽀득뽀득)'); } }
