@@ -40,7 +40,7 @@ function mumbleOf(id, o) {
   if (o.fun > 75) opts.push('happy'); if (h >= 23 || h < 5) opts.push('night');
   const cat = opts.length && Math.random() < 0.6 ? pick(opts) : 'normal', key = id + cat;
   if (!BAG[key] || !BAG[key].length) BAG[key] = [...m[cat]].sort(() => Math.random() - 0.5);
-  return BAG[key].pop();
+  return BAG[key].pop().split('{call}').join(o.call || '너');
 }
 
 function spr(cat, k, col, sc) {
