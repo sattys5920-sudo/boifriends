@@ -394,6 +394,14 @@ def build():
             edge = a & ~ndimage.binary_erosion(a); kill = edge & light & legs
             if not kill.any(): break
             a &= ~kill
+        # 배경에 닿은 작은 밝은 덩어리(흰 점·삐죽한 조각)는 어디에 있든 지워요. 셔츠·날개 같은 큰 흰 면은 그대로
+        for _ in range(2):
+            bgm = ~a; touch = ndimage.binary_dilation(bgm, iterations=1)
+            ll, ln = ndimage.label(light & a)
+            if ln:
+                sz = ndimage.sum(np.ones_like(ll), ll, range(1, ln + 1)); tc = ndimage.maximum(touch, ll, range(1, ln + 1))
+                small = [i + 1 for i in range(ln) if sz[i] < (60 if cid != 'gintoki' else 12) and tc[i]]
+                a &= ~np.isin(ll, small)
         lab, n = ndimage.label(a)
         if n: sz = ndimage.sum(a, lab, range(1, n + 1)); a &= ~np.isin(lab, 1 + np.where(sz < 8)[0])
         block[..., 3] = np.where(a, block[..., 3], 0)

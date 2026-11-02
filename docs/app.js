@@ -48,7 +48,7 @@ function spr(cat, k, col, sc) {
   return `<div class="clip" style="width:${it[2] * sc}px;height:${it[3] * sc}px;POS"><img class="px" src="assets/decor/${cat}.png" alt="" style="width:${S.sw * sc}px;height:${S.sh * sc}px;margin-left:${-col * S.cw * sc}px;margin-top:${-i * S.ch * sc}px"></div>`;
 }
 const icon = (k, sz) => `<span class="itm" style="width:${sz}px;height:${sz}px"><img class="px" src="assets/ui/items.png" alt="" style="width:${IT.length * sz}px;height:${sz}px;margin-left:${-ITM[k].i * sz}px"></span>`;
-const face = (id, w) => { const s = w / 96; return `<img class="px" src="assets/ch/${id}.webp?v=9" alt="" style="position:absolute;width:${384 * s}px;height:${528 * s}px;left:${-(96 * s - w) / 2}px;top:0;max-width:none">`; };
+const face = (id, w) => { const s = w / 96; return `<img class="px" src="assets/ch/${id}.webp?v=10" alt="" style="position:absolute;width:${384 * s}px;height:${528 * s}px;left:${-(96 * s - w) / 2}px;top:0;max-width:none">`; };
 
 // ---------- 저장 ----------
 let fb = null, user = null, S = null, saveT = null;
@@ -115,7 +115,7 @@ function sleepHTML(id, r) {
   const pos = r.a && r.a[0] === 'bed' ? 'left:3%;bottom:20%' : r.b && r.b[0] === 'bed' ? 'right:3%;bottom:20%' : 'left:calc(50% - 44px);bottom:6%';
   const s = 36 / 96;
   return `<div style="position:absolute;width:88px;height:56px;${pos};z-index:5"><div style="position:absolute;inset:0;filter:brightness(.22)">
-    <div style="position:absolute;left:11px;top:1px;width:36px;height:50px;overflow:hidden;transform:rotate(-90deg)"><img class="px" src="assets/ch/${id}.webp?v=9" alt="" style="width:${384 * s}px;height:${528 * s}px;max-width:none;margin-top:${-132 * s}px"></div>
+    <div style="position:absolute;left:11px;top:1px;width:36px;height:50px;overflow:hidden;transform:rotate(-90deg)"><img class="px" src="assets/ch/${id}.webp?v=10" alt="" style="width:${384 * s}px;height:${528 * s}px;max-width:none;margin-top:${-132 * s}px"></div>
     <div style="position:absolute;left:19px;top:19px;width:67px;height:29px;border:2px solid var(--ink);border-radius:8px 6px 4px 4px;background:#8ccff5;background-image:repeating-linear-gradient(90deg,transparent 0 10px,rgba(255,255,255,.5) 10px 13px)"></div></div>
     <span class="emo" style="left:8px;top:-22px;color:#5b6bd6">Z z z</span></div>`;
 }
@@ -125,7 +125,7 @@ function roomHTML(id, o, scale) {
     <div class="floor" style="background-color:${PAL[r.fc][1]};background-image:${tileUrl('floor', r.fl)}"></div>
     ${slot('deco', r.dc, 'left:6%;top:6%')}${slot('furn', r.a, 'left:3%;bottom:20%')}${slot('furn', r.b, 'right:3%;bottom:20%')}${slot('prop', r.pr, 'left:28%;bottom:4%;z-index:2')}
     ${id && o.sleeping ? sleepHTML(id, r) : ''}${id && o.job ? `<div style="position:absolute;left:50%;top:38%;transform:translateX(-50%);z-index:5;background:#fff;border:3px solid var(--ink);border-radius:10px;padding:6px 10px;font-size:11px;text-align:center;line-height:1.5"><img src="assets/ui/ic_job.png" alt="" style="width:18px;vertical-align:-4px"> ${esc(JOB_NAME[id])} 알바 중<br><b id="jobleft">${timeLeft(o.job.until)}</b></div>` : ''}
-    ${id ? `<div class="shadow" id="shd"></div><div class="man" id="man"><img class="px" src="assets/ch/${id}.webp?v=9" alt="${esc(nameOf(id))}"></div><span class="emo" id="emo" hidden></span><span class="mumble" id="mum" hidden></span>` : ''}
+    ${id ? `<div class="shadow" id="shd"></div><div class="man" id="man"><img class="px" src="assets/ch/${id}.webp?v=10" alt="${esc(nameOf(id))}"></div><span class="emo" id="emo" hidden></span><span class="mumble" id="mum" hidden></span>` : ''}
     ${o.sleeping ? '<div class="night"></div>' : ''}
   </div>`;
 }
