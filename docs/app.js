@@ -108,6 +108,7 @@ const cur = () => S.cur && S.owned[S.cur] ? S.cur : Object.keys(S.owned)[0];
 const nameOf = id => id === 'hidden' ? (S.owned.hidden?.name || '???') : CHM[id].name;
 
 const timeLeft = t => { const m = Math.max(0, Math.ceil((t - Date.now()) / 60000)); return m >= 60 ? `${Math.floor(m / 60)} 시간 ${m % 60} 분 남음` : `${m} 분 남음`; };
+const wakeAt = o => Date.now() + Math.max(0, 100 - (o.energy + 14 * (Date.now() - S.last) / 3.6e6)) / 14 * 3.6e6;
 const tileUrl = (cat, k) => k === 'plain' ? 'none' : `url(assets/decor/${cat}_${k}.png)`;
 const slot = (cat, v, pos) => v ? spr(cat, v[0], v[1], 2).replace('POS', pos) : '';
 // 잠: 침대에 뒷모습으로 눕히고 이불 덮기 (침대가 없으면 바닥에 이불)
@@ -126,7 +127,7 @@ function roomHTML(id, o, scale) {
     ${slot('deco', r.dc, 'left:6%;top:6%')}${slot('furn', r.a, 'left:3%;bottom:20%')}${slot('furn', r.b, 'right:3%;bottom:20%')}${slot('prop', r.pr, 'left:28%;bottom:4%;z-index:2')}
     ${id && o.sleeping ? sleepHTML(id, r) : ''}${id && o.job ? `<div style="position:absolute;left:50%;top:38%;transform:translateX(-50%);z-index:5;background:#fff;border:3px solid var(--ink);border-radius:10px;padding:6px 10px;font-size:11px;text-align:center;line-height:1.5"><img src="assets/ui/ic_job.png" alt="" style="width:18px;vertical-align:-4px"> ${esc(JOB_NAME[id])} 알바 중<br><b id="jobleft">${timeLeft(o.job.until)}</b></div>` : ''}
     ${id ? `<div class="shadow" id="shd" ${o.sleeping || o.job ? 'style="display:none"' : ''}></div><div class="man" id="man" ${o.sleeping || o.job ? 'style="display:none"' : ''}><img class="px" src="assets/ch/${id}.webp?v=15" alt="${esc(nameOf(id))}"></div><span class="emo" id="emo" hidden></span><span class="mumble" id="mum" hidden></span>` : ''}
-    ${o.sleeping ? '<div class="night"></div>' : ''}
+    ${o.sleeping ? `<div class="night"></div><div class="sleepleft">쿨쿨 · 일어나기까지 <b id="sleepleft">${timeLeft(wakeAt(o)).replace(' 남음', '')}</b></div>` : ''}
   </div>`;
 }
 function meterHTML(o) {
@@ -438,6 +439,7 @@ function animStep(adv) {
   paintMan(man, id, o, A, n);
 }
 function paintMan(man, id, o, A, n) {
+  const sl_ = $('#sleepleft'); if (o.sleeping && sl_) { sl_.textContent = timeLeft(wakeAt(o)).replace(' 남음', ''); if (Date.now() >= wakeAt(o)) { tickTime(); save(); return render(); } }
   if (o.job) { man.style.display = 'none'; return; }
   const sl = o.sleeping, row = sl ? 0 : A.mode === 'walk' ? (A.dir < 0 ? 2 : 3) : A.mode === 'back' ? 1 : 0;
   const col = A.mode === 'walk' && !sl ? A.f % n[row] : 0, x = sl ? 0 : A.x, left = `calc(50% + ${x * 38}% - 33px)`;
