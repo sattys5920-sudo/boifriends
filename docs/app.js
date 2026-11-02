@@ -30,7 +30,18 @@ const JOBS = [['30분', 30, 40], ['3시간', 180, 150], ['8시간', 480, 350]];
 const DROP_MS = 5 * 60 * 1000;
 const GACHA = 300, DUP = 150, TALK_MAX = 3, LOVE_DAY = 4;   // 애정은 하루 최대 4 → 한 단계(25)에 약 일주일
 function addLove(o, n) { if (!o.lv || o.lv.day !== today()) o.lv = { day: today(), g: 0 }; const g = Math.max(0, Math.min(n, LOVE_DAY - o.lv.g)); const before = stageOf(o.love); o.lv.g += g; o.love = clamp(o.love + g); if (stageOf(o.love) !== before) { S.coins += 100; setTimeout(() => toast(`${stageOf(o.love)[0]}이(가) 됐어요! +100코인`), 50); } return g; }
-let CH = [], CHM = {}, TALK = {}, FR = {}, IT = [], ITM = {};
+let CH = [], CHM = {}, TALK = {}, FR = {}, IT = [], ITM = {}, MUM = {};
+// 혼잣말: 지금 상태에 맞는 묶음에서, 다 쓸 때까지 겹치지 않게 섞어서 꺼내요
+const BAG = {};
+function mumbleOf(id, o) {
+  const m = MUM[id]; if (!m) return pick(CHM[id].mumble);
+  const h = new Date().getHours(), opts = [];
+  if (o.food < 35) opts.push('hungry'); if (o.energy < 30) opts.push('sleepy'); if (o.fun < 35) opts.push('bored'); if (o.clean < 35) opts.push('dirty');
+  if (o.fun > 75) opts.push('happy'); if (h >= 23 || h < 5) opts.push('night');
+  const cat = opts.length && Math.random() < 0.6 ? pick(opts) : 'normal', key = id + cat;
+  if (!BAG[key] || !BAG[key].length) BAG[key] = [...m[cat]].sort(() => Math.random() - 0.5);
+  return BAG[key].pop();
+}
 
 function spr(cat, k, col, sc) {
   const S = SHEET[cat], L = ITEMS[cat], i = Math.max(0, L.findIndex(x => x[0] === k)), it = L[i];
@@ -276,7 +287,7 @@ function pJob() {
     ${JOBS.map((j, i) => `<button class="btn ${i === 1 ? 'yellow' : 'white'}" data-act="dojob" data-v="${i}" ${o.sleeping ? 'disabled' : ''} style="display:flex;justify-content:space-between;align-items:center"><span>${j[0]}</span><span><img src="assets/ui/ic_coin.png" alt="" style="width:16px;vertical-align:-3px"> +${j[2]}</span></button>`).join('')}`];
 }
 function pMail() {
-  return ['편지', (S.mail || []).map(m => `<div class="card" style="display:flex;align-items:center;gap:10px"><span style="width:40px;height:40px;border:2px solid var(--ink);border-radius:10px;overflow:hidden;position:relative;background:#bfe6ff;flex-shrink:0">${face(m.id, 40)}</span><span style="flex:1;font-size:12px;line-height:1.5"><b>${esc(nameOf(m.id))}</b><br>${esc(pick(CHM[m.id].mumble))}</span><span class="pill coin"><img src="assets/ui/ic_coin.png" alt="">+${m.c}</span></div>`).join('') + `<button class="btn yellow" data-act="getmail">모두 받기</button>`];
+  return ['편지', (S.mail || []).map(m => `<div class="card" style="display:flex;align-items:center;gap:10px"><span style="width:40px;height:40px;border:2px solid var(--ink);border-radius:10px;overflow:hidden;position:relative;background:#bfe6ff;flex-shrink:0">${face(m.id, 40)}</span><span style="flex:1;font-size:12px;line-height:1.5"><b>${esc(nameOf(m.id))}</b><br>${esc(MUM[m.id] ? pick(MUM[m.id].normal) : pick(CHM[m.id].mumble))}</span><span class="pill coin"><img src="assets/ui/ic_coin.png" alt="">+${m.c}</span></div>`).join('') + `<button class="btn yellow" data-act="getmail">모두 받기</button>`];
 }
 function pMenu() {
   return ['메뉴', `<div class="card" style="font-size:13px"><b>${esc(user.id)}</b></div>
@@ -375,7 +386,7 @@ setInterval(() => {
   if (A.mode === 'walk') { A.x += A.dir * 0.025; if (Math.abs(A.x) > 0.9) { A.dir = -A.dir; A.x = Math.max(-0.9, Math.min(0.9, A.x)); } }
   if (A.t <= 0) { A.mode = pick(MODES); A.t = 12 + Math.floor(Math.random() * 18); if (Math.random() < .5) A.dir = -A.dir; }
   if (Date.now() - (S.lastDrop || 0) > DROP_MS && !$('#drop') && !o.job) { const r = document.querySelector('.lcd .room'); if (r) { const c = document.createElement('button'); c.id = 'drop'; c.dataset.act = 'coin'; c.setAttribute('aria-label', '동전 줍기'); c.style.cssText = `position:absolute;left:${10 + Math.random() * 75}%;bottom:${4 + Math.random() * 18}%;width:30px;height:30px;padding:0;border:0;background:url(assets/ui/ic_coin.png) center/24px no-repeat;z-index:3;animation:emo 1s ease-in-out infinite`; r.appendChild(c); S.lastDrop = Date.now(); } }
-  if (A.tick % 45 === 0) A.mum = Math.floor(Math.random() * 3); else if (A.tick % 45 === 20) A.mum = -1;
+  if (A.tick % 45 === 0) A.mumT = mumbleOf(id, o); else if (A.tick % 45 === 20) A.mumT = '';
   if (A.heart > 0) A.heart--;
   if (o.job) { man.style.display = 'none'; $('#shd').style.display = 'none'; $('#emo').hidden = true; $('#mum').hidden = true; const jl = $('#jobleft'); if (jl) jl.textContent = timeLeft(o.job.until); if (Date.now() >= o.job.until) { tickTime(); save(); render(); } return; }
   const sl = o.sleeping, row = sl ? 0 : A.mode === 'walk' ? (A.dir < 0 ? 2 : 3) : A.mode === 'back' ? 1 : 0;
@@ -386,7 +397,7 @@ setInterval(() => {
   if (A.angry > 0) A.angry--;
   const emo = $('#emo'), e = sl ? null : A.angry > 0 ? ['…!?', '#c0392b'] : A.heart > 0 ? ['♥ ♥', '#e0457b'] : o.food < 40 ? ['꼬르륵…', '#c47a1a'] : o.clean < 35 ? ['킁킁…', '#5b8a3c'] : o.fun > 75 ? ['♪', '#2f8f73'] : null;
   emo.hidden = !e; if (e) { emo.textContent = e[0]; emo.style.color = e[1]; emo.style.left = `calc(50% + ${x * 38}% + 14px)`; emo.style.bottom = sl ? '30%' : '52%'; }
-  const mum = $('#mum'), mt = !sl && A.mum >= 0 ? CHM[id].mumble[A.mum] : '';
+  const mum = $('#mum'), mt = !sl ? (A.mumT || '') : '';
   mum.hidden = !mt; if (mt) { mum.textContent = mt; mum.style.left = `clamp(4px, calc(50% + ${x * 38}% - 70px), calc(100% - 64%))`; }
 }, 170);
 setInterval(() => { if (S && user) { tickTime(); save(); } }, 60000);
@@ -394,8 +405,8 @@ setInterval(() => { if (S && user) { tickTime(); save(); } }, 60000);
 // ---------- 시작 ----------
 (async () => {
   app.innerHTML = '<div class="start"><div class="egg"><div class="scr"></div></div><div class="note">불러오는 중…</div></div>';
-  const [c, t, f, it] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json'].map(u => fetch(u).then(r => r.json())));
-  CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x]));
+  const [c, t, f, it, mu] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json'].map(u => fetch(u).then(r => r.ok ? r.json() : {})));
+  CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x])); MUM = mu;
   try { await initFirebase(); } catch (e) { console.warn('Firebase 연결 실패, 기기 저장으로', e); fb = null; }
   if (fb) {
     fb.AU.onAuthStateChanged(fb.auth, async u => { if (u && !user) { user = { uid: u.uid, id: u.email.split('@')[0] }; await enter(); } else if (!u) { user = null; render(); } });
