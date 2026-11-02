@@ -152,7 +152,7 @@ function renderStart() {
         <label class="label" for="pw">비밀번호</label><input class="field" id="pw" name="pw" type="password" autocomplete="${startMode === 'join' ? 'new-password' : 'current-password'}" required minlength="6" placeholder="6자 이상">
         <button class="btn" type="submit" style="margin-top:6px">${startMode === 'join' ? `가입하고 ${GACHA}코인 받기` : '로그인'}</button>
       </form></div>
-    <div class="note">${fb ? '로그인하면 이 기기와 계정 모두에 저장돼요.<br>폰을 바꿔도 같은 아이디로 이어서 할 수 있어요.' : '지금은 서버 설정 전이라 이 기기에만 저장돼요.'}</div>
+    <div class="note">${fb ? '로그인하면 이 기기와 계정 모두에 저장돼요.<br>폰을 바꿔도 같은 아이디로 이어서 할 수 있어요.' : (window.FIREBASE_CONFIG ? '서버에 연결하지 못해서 지금은 이 기기에만 저장돼요. 잠시 후 새로고침해 보세요.' : '지금은 서버 설정 전이라 이 기기에만 저장돼요.')}</div>
   </div>`;
   $('#auth').onsubmit = async e => {
     e.preventDefault(); const id = $('#uid').value.trim(), pw = $('#pw').value;
@@ -231,7 +231,7 @@ function pDex() {
     <div class="grid4">${all.map(c => { const o = S.owned[c.id]; return `<div class="tile"><div class="pic">${o ? face(c.id, 72).replace('position:absolute;', 'position:absolute;') : '<div class="sil"><i class="h"></i><i class="bd">?</i></div>'}</div><span style="color:${o ? 'inherit' : 'var(--ink2)'}">${o ? esc(nameOf(c.id)) : '???'}</span>${o ? `<span class="label">${stageOf(o.love)[0]}</span>` : ''}</div>`; }).join('')}</div>`];
 }
 function pMenu() {
-  return ['메뉴', `<div class="card" style="font-size:12px;line-height:1.8">아이디: <b>${esc(user.id)}</b><br>저장: ${fb ? '계정(서버) + 이 기기' : '이 기기에만 (서버 설정 전)'}</div>
+  return ['메뉴', `<div class="card" style="font-size:12px;line-height:1.8">아이디: <b>${esc(user.id)}</b><br>저장: ${fb ? '계정(서버) + 이 기기' : '이 기기에만'}</div>
     <div class="card label" style="line-height:1.7">· 시간이 지나면 배부름·기분·청결·체력이 줄어요.<br>· 재우면 체력이 차요.<br>· 대화는 사람마다 하루 ${TALK_MAX}번. 애정 단계마다 대답이 달라져요.<br>· 애정은 하루 최대 +${LOVE_DAY}. 꾸준히 돌보면 일주일에 한 단계쯤 올라요.<br>· 너무 오래 굶기고 방치하면 애정이 조금 줄어요.<br>· 돌보면 코인이 모여요. 매일 처음 들어오면 +100코인.</div>
     <button class="btn white" data-act="logout">로그아웃</button>`];
 }
