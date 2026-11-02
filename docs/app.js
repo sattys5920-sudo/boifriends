@@ -26,10 +26,10 @@ const MOODS = ['기분 최고', '설렘', '들뜸', '나른함', '심술', '시�
 function moodOf(id) { let h = 0; for (const ch of today() + id) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return MOODS[h % MOODS.length]; }
 function stateOf(o) { if (o.sleeping) return '쿨쿨'; const a = []; if (o.food < 35) a.push('배고픔'); if (o.energy < 30) a.push('졸림'); if (o.fun < 35) a.push('심심함'); if (o.clean < 35) a.push('꼬질꼬질'); return a.join(' · ') || '만족'; }
 const JOB_NAME = { curly_suit: '소바집 배달', blue: '사진 촬영 보조', blonde_student: '신발 가게', mole: '학원 강사', punk: '스튜디오 세션', bartender: '바텐더', curly_coat: '도서관 정리', mint: '잡지 모델', karate: '도장 사범 대리', baseball: '배팅 센터', spiky: '탈환 의뢰', kyon: '편의점', ponytail: '수박 농장', chiro: '담배 가게 카운터', saiki: '라멘집 (몰래)', nozaki: '만화 어시스턴트', ahoge: '과외', blindfold: '서버 관리', headphone: '영상 편집', gintoki: '해결사 의뢰', nifuji: '게임 테스터', usui: '메이드 카페 주방', izumi: '사신 업무', shima: '카페', hidden: '편의점 야간' };
-const JOBS = [['30분', 30, 40], ['3시간', 180, 150], ['8시간', 480, 350]];
+const JOBS = [['30 분', 30, 40], ['3 시간', 180, 150], ['8 시간', 480, 350]];
 const DROP_MS = 5 * 60 * 1000;
 const GACHA = 300, DUP = 150, TALK_MAX = 3, LOVE_DAY = 4;   // 애정은 하루 최대 4 → 한 단계(25)에 약 일주일
-function addLove(o, n) { if (!o.lv || o.lv.day !== today()) o.lv = { day: today(), g: 0 }; const g = Math.max(0, Math.min(n, LOVE_DAY - o.lv.g)); const before = stageOf(o.love); o.lv.g += g; o.love = clamp(o.love + g); if (stageOf(o.love) !== before) { S.coins += 100; setTimeout(() => toast(`${stageOf(o.love)[0]}이(가) 됐어요! +100코인`), 50); } return g; }
+function addLove(o, n) { if (!o.lv || o.lv.day !== today()) o.lv = { day: today(), g: 0 }; const g = Math.max(0, Math.min(n, LOVE_DAY - o.lv.g)); const before = stageOf(o.love); o.lv.g += g; o.love = clamp(o.love + g); if (stageOf(o.love) !== before) { S.coins += 100; setTimeout(() => toast(`${stageOf(o.love)[0]}이(가) 됐어요! +100 코인`), 50); } return g; }
 let CH = [], CHM = {}, TALK = {}, FR = {}, IT = [], ITM = {}, MUM = {};
 // 혼잣말: 지금 상태에 맞는 묶음에서, 다 쓸 때까지 겹치지 않게 섞어서 꺼내요
 const BAG = {};
@@ -97,9 +97,9 @@ function tickTime() {
     if (o.sleeping && o.energy >= 100) o.sleeping = false;
     if (o.food < 10 && o.fun < 10) o.love = clamp(o.love - 2 * h / 24);
   }
-  for (const [id, o] of Object.entries(S.owned)) if (o.job && now >= o.job.until) { S.coins += o.job.pay; o.food = clamp(o.food - 15); o.energy = clamp(o.energy - 20); setTimeout(() => toast(`${nameOf(id)} 알바 끝! +${o.job.pay}코인`), 300); o.job = null; }
+  for (const [id, o] of Object.entries(S.owned)) if (o.job && now >= o.job.until) { S.coins += o.job.pay; o.food = clamp(o.food - 15); o.energy = clamp(o.energy - 20); setTimeout(() => toast(`${nameOf(id)} 알바 끝! +${o.job.pay} 코인`), 300); o.job = null; }
   S.last = now;
-  if (S.day !== today()) { S.day = today(); S.coins += 150; toast('출석 +150코인'); S.mail = Object.keys(S.owned).map(id => ({ id, c: 10 + Math.floor(Math.random() * 31) })); }
+  if (S.day !== today()) { S.day = today(); S.coins += 150; toast('출석 +150 코인'); S.mail = Object.keys(S.owned).map(id => ({ id, c: 10 + Math.floor(Math.random() * 31) })); }
 }
 
 // ---------- 화면 ----------
@@ -107,7 +107,7 @@ let panel = null, anim = { x: 0, dir: 1, mode: 'walk', t: 20, f: 0, mum: -1, hea
 const cur = () => S.cur && S.owned[S.cur] ? S.cur : Object.keys(S.owned)[0];
 const nameOf = id => id === 'hidden' ? (S.owned.hidden?.name || '???') : CHM[id].name;
 
-const timeLeft = t => { const m = Math.max(0, Math.ceil((t - Date.now()) / 60000)); return m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분 남음` : `${m}분 남음`; };
+const timeLeft = t => { const m = Math.max(0, Math.ceil((t - Date.now()) / 60000)); return m >= 60 ? `${Math.floor(m / 60)} 시간 ${m % 60} 분 남음` : `${m} 분 남음`; };
 const tileUrl = (cat, k) => k === 'plain' ? 'none' : `url(assets/decor/${cat}_${k}.png)`;
 const slot = (cat, v, pos) => v ? spr(cat, v[0], v[1], 2).replace('POS', pos) : '';
 // 잠: 침대에 뒷모습으로 눕히고 이불 덮기 (침대가 없으면 바닥에 이불)
@@ -179,7 +179,7 @@ function renderStart() {
       <form id="auth" style="padding:14px;display:flex;flex-direction:column;gap:8px">
         <label class="label" for="uid">아이디</label><input class="field" id="uid" name="uid" autocomplete="username" required minlength="4" maxlength="12" pattern="[A-Za-z0-9_]+" placeholder="영문·숫자 4~12자">
         <label class="label" for="pw">비밀번호</label><input class="field" id="pw" name="pw" type="password" autocomplete="${startMode === 'join' ? 'new-password' : 'current-password'}" required minlength="6" placeholder="6자 이상">
-        <button class="btn" type="submit" style="margin-top:6px">${startMode === 'join' ? `가입하고 ${GACHA}코인 받기` : '로그인'}</button>
+        <button class="btn" type="submit" style="margin-top:6px">${startMode === 'join' ? `가입하고 ${GACHA} 코인 받기` : '로그인'}</button>
       </form></div>
     ${fb ? '' : '<div class="note">오프라인 · 이 기기에만 저장</div>'}
   </div>`;
@@ -240,7 +240,7 @@ function pDecor() {
     const k = it[0], on = tab === 'wall' ? r.wp === k : tab === 'floor' ? r.fl === k : !!r[key] && r[key][0] === k, have = S.items.includes(k);
     const th = tab === 'wall' || tab === 'floor' ? `<div class="th" style="background-color:${PAL[tab === 'wall' ? r.wc : r.fc][1]};background-image:${tileUrl(tab, k)}"></div>`
       : `<div class="th">${spr(tab, k, curCol, Math.max(it[2], it[3]) > 24 ? 1 : 2).replace('POS', 'position:relative')}</div>`;
-    return `<button class="item" data-act="ditem" data-v="${k}" aria-pressed="${on}">${th}<span>${it[1]}</span><small style="color:${on ? '#b8336a' : have ? '#1f7a60' : 'inherit'}">${on ? '사용 중' : have ? '보유' : PRICE[tab] + '코인'}</small></button>`;
+    return `<button class="item" data-act="ditem" data-v="${k}" aria-pressed="${on}">${th}<span>${it[1]}</span><small style="color:${on ? '#b8336a' : have ? '#1f7a60' : 'inherit'}">${on ? '사용 중' : have ? '보유' : PRICE[tab] + ' 코인'}</small></button>`;
   }).join('');
   const none = tab === 'wall' || tab === 'floor' ? '' : `<button class="item" data-act="ditem" data-v="none" aria-pressed="${!r[key]}"><div class="th" style="font-size:20px;color:var(--ink2)">✕</div><span>없음</span><small></small></button>`;
   return ['방 꾸미기', `<div class="lcd" style="padding:4px">${roomHTML(null, o)}</div>
@@ -282,7 +282,7 @@ function give(k) {
 }
 function pJob() {
   const id = cur(), o = S.owned[id];
-  if (o.job) return ['알바', `<div class="card" style="text-align:center;line-height:1.8"><img src="assets/ui/ic_job.png" alt="" style="width:32px"><br><b>${esc(JOB_NAME[id])}</b><br>${timeLeft(o.job.until)} · +${o.job.pay}코인</div>`];
+  if (o.job) return ['알바', `<div class="card" style="text-align:center;line-height:1.8"><img src="assets/ui/ic_job.png" alt="" style="width:32px"><br><b>${esc(JOB_NAME[id])}</b><br>${timeLeft(o.job.until)} · +${o.job.pay} 코인</div>`];
   return ['알바', `<div class="card" style="text-align:center"><img src="assets/ui/ic_job.png" alt="" style="width:32px"><br><b>${esc(JOB_NAME[id])}</b></div>
     ${JOBS.map((j, i) => `<button class="btn ${i === 1 ? 'yellow' : 'white'}" data-act="dojob" data-v="${i}" ${o.sleeping ? 'disabled' : ''} style="display:flex;justify-content:space-between;align-items:center"><span>${j[0]}</span><span><img src="assets/ui/ic_coin.png" alt="" style="width:16px;vertical-align:-3px"> +${j[2]}</span></button>`).join('')}`];
 }
@@ -356,14 +356,14 @@ document.addEventListener('click', e => {
   if (a === 'prev' || a === 'next') { const ids = Object.keys(S.owned), i = ids.indexOf(cur()); S.cur = ids[(i + (a === 'next' ? 1 : ids.length - 1)) % ids.length]; sayText = null; save(); return render(); }
   if (['who', 'profile', 'decor', 'gacha', 'dex', 'menu', 'give', 'job', 'mail'].includes(a)) return openPanel(a);
   if (a === 'dojob') { const o = S.owned[cur()], j = JOBS[+v]; o.job = { until: Date.now() + j[1] * 60000, pay: j[2] }; o.sleeping = false; save(); panel = null; document.querySelector('.sheet')?.remove(); sayText = '(다녀올게)'; return render(); }
-  if (a === 'getmail') { const n = (S.mail || []).reduce((t, m) => t + m.c, 0); S.coins += n; S.mail = []; save(); panel = null; document.querySelector('.sheet')?.remove(); toast(`+${n}코인`); return render(); }
+  if (a === 'getmail') { const n = (S.mail || []).reduce((t, m) => t + m.c, 0); S.coins += n; S.mail = []; save(); panel = null; document.querySelector('.sheet')?.remove(); toast(`+${n} 코인`); return render(); }
   if (a === 'gtab') { panel.tab = v; return renderPanel(); }
   if (a === 'giveit') return give(v);
   if (a === 'close') return closePanel();
   if (a === 'pick') { S.cur = b.dataset.id; sayText = null; save(); panel = null; document.querySelector('.sheet')?.remove(); return render(); }
   if (a === 'logout') { panel = null; document.querySelector('.sheet')?.remove(); return logOut(); }
   if (a === 'pull') return pull();
-  if (a === 'coin') { const n = 10 + Math.floor(Math.random() * 21); S.coins += n; b.remove(); toast(`+${n}코인`); save(); document.querySelector('.pill.coin').lastChild.textContent = S.coins.toLocaleString('ko-KR'); return; }
+  if (a === 'coin') { const n = 10 + Math.floor(Math.random() * 21); S.coins += n; b.remove(); toast(`+${n} 코인`); save(); document.querySelector('.pill.coin').lastChild.textContent = S.coins.toLocaleString('ko-KR'); return; }
   if (a === 'dtab') { panel.tab = v; return renderPanel(); }
   if (a === 'dslot') { panel.slot = v; return renderPanel(); }
   const o = S.owned[cur()]; if (!o) return;
@@ -371,7 +371,7 @@ document.addEventListener('click', e => {
   if (a === 'dcol') { const i = +v; if (tab === 'wall') o.room.wc = i; else if (tab === 'floor') o.room.fc = i; else if (o.room[key]) o.room[key] = [o.room[key][0], i]; save(); render(); return renderPanel(); }
   if (a === 'ditem') {
     if (v === 'none') { o.room[key] = null; save(); render(); return renderPanel(); }
-    if (!S.items.includes(v)) { if (S.coins < PRICE[tab]) return toast('코인이 부족해요.'); S.coins -= PRICE[tab]; S.items.push(v); toast(`구매했어요. -${PRICE[tab]}코인`); }
+    if (!S.items.includes(v)) { if (S.coins < PRICE[tab]) return toast('코인이 부족해요.'); S.coins -= PRICE[tab]; S.items.push(v); toast(`구매했어요. -${PRICE[tab]} 코인`); }
     if (tab === 'wall' || tab === 'floor') o.room[key] = v; else o.room[key] = [v, o.room[key] ? o.room[key][1] : 0];
     save(); render(); return renderPanel();
   }
