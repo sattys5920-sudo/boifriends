@@ -7,6 +7,7 @@ for f in maps/*.py; do python3 "$f"; done
 python3 tk_npcs.py
 python3 tk_chars.py
 python3 tk_world_build.py
+rm -rf tk_world/lpc && cp -r lpc_parts tk_world/lpc
 python3 - <<'PY'
 import base64
 f = base64.b64encode(open('fonts/Galmuri11.full.woff2', 'rb').read()).decode()
