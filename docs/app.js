@@ -98,9 +98,9 @@ const slot = (cat, v, pos) => v ? spr(cat, v[0], v[1], 2).replace('POS', pos) : 
 function sleepHTML(id, r) {
   const pos = r.a && r.a[0] === 'bed' ? 'left:3%;bottom:20%' : r.b && r.b[0] === 'bed' ? 'right:3%;bottom:20%' : 'left:calc(50% - 44px);bottom:6%';
   const s = 36 / 96;
-  return `<div style="position:absolute;width:88px;height:56px;${pos};z-index:2">
+  return `<div style="position:absolute;width:88px;height:56px;${pos};z-index:5"><div style="position:absolute;inset:0;filter:brightness(.22)">
     <div style="position:absolute;left:11px;top:1px;width:36px;height:50px;overflow:hidden;transform:rotate(-90deg)"><img class="px" src="assets/ch/${id}.webp" alt="" style="width:${384 * s}px;height:${528 * s}px;max-width:none;margin-top:${-132 * s}px"></div>
-    <div style="position:absolute;left:19px;top:19px;width:67px;height:29px;border:2px solid var(--ink);border-radius:8px 6px 4px 4px;background:#8ccff5;background-image:repeating-linear-gradient(90deg,transparent 0 10px,rgba(255,255,255,.5) 10px 13px)"></div>
+    <div style="position:absolute;left:19px;top:19px;width:67px;height:29px;border:2px solid var(--ink);border-radius:8px 6px 4px 4px;background:#8ccff5;background-image:repeating-linear-gradient(90deg,transparent 0 10px,rgba(255,255,255,.5) 10px 13px)"></div></div>
     <span class="emo" style="left:8px;top:-22px;color:#5b6bd6">Z z z</span></div>`;
 }
 function roomHTML(id, o, scale) {
