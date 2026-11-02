@@ -21,7 +21,7 @@ SIDE = {
     'punk':           dict(left=[(2, 3), (2, 4), (2, 5), (3, 3)], right=None, fill_frame=6, outline=True),
     'bartender':      dict(left=[(2, 0), (2, 1), (2, 2), (3, 1)], right=[(2, 3), (2, 4), (3, 3), (3, 4)], fill_frame=6, outline=True),
     'curly_coat':     dict(left=[(2, 0), (2, 1), (2, 2), (2, 3)], right=None),
-    'baseball':       dict(left=[(3, 0), (3, 1), (3, 2), (2, 0)], right=[(2, 1), (2, 2), (2, 3), (2, 4)], trim_front=True, clean_front=True, down=[0, 1, 2], nolegpeel=True),
+    'baseball':       dict(down=[0, 1, 2, 3], up=[1, 2, 3, 4], left='mirror', right=[(2, 1), (2, 2), (2, 3), (2, 4)]),
     'ume':            dict(left='mirror', right=[(2, 1), (2, 3), (2, 4), (2, 5)], down=[0, 1, 2, 3], up=[0, 1, 2, 3]),
     'kaguya':         dict(left='mirror', right=[(2, 1), (2, 3), (2, 4), (2, 5)], down=[0, 1, 2, 3], up=[0, 1, 2, 3]),
     'ahoge':          dict(left='mirror', right=[(2, 2), (2, 3), (2, 4), (3, 2)], down=[0, 1, 2], up=[0, 1, 2]),
