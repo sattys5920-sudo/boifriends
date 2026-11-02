@@ -42,10 +42,12 @@
 ],
 "li": [
 "soba",
-"moneyenv"
+"moneyenv",
+"watch"
 ],
 "di": [
-"bracelet"
+"bracelet",
+"flowers"
 ]
 },
 {
@@ -91,9 +93,12 @@
 ],
 "li": [
 "camera",
-"cocktail"
+"cocktail",
+"sunglasses"
 ],
-"di": []
+"di": [
+"umbrella"
+]
 },
 {
 "id": "blonde_student",
@@ -136,9 +141,13 @@
 "지는 건 싫어."
 ],
 "li": [
-"sneakers"
+"sneakers",
+"ramune",
+"dumbbell"
 ],
-"di": []
+"di": [
+"wordbook"
+]
 },
 {
 "id": "mole",
@@ -181,9 +190,13 @@
 "커피 한 잔 더?"
 ],
 "li": [
-"coffee"
+"coffee",
+"mug",
+"gyudon"
 ],
-"di": []
+"di": [
+"bug"
+]
 },
 {
 "id": "punk",
@@ -226,9 +239,13 @@
 "…조용하네. 나쁘지 않아."
 ],
 "li": [
-"guitar"
+"guitar",
+"record",
+"cocktail"
 ],
-"di": []
+"di": [
+"flowers"
+]
 },
 {
 "id": "bartender",
@@ -278,7 +295,8 @@
 "parfait"
 ],
 "di": [
-"furcoat"
+"furcoat",
+"mayo"
 ]
 },
 {
@@ -324,9 +342,12 @@
 ],
 "li": [
 "curry",
-"novel"
+"novel",
+"puzzle"
 ],
-"di": []
+"di": [
+"fanletter"
+]
 },
 {
 "id": "mint",
@@ -368,10 +389,13 @@
 "후드 쓰면 좀 낫겠지."
 ],
 "li": [
-"hoodie"
+"hoodie",
+"milktea",
+"sunglasses"
 ],
 "di": [
-"fanletter"
+"fanletter",
+"perfume"
 ]
 },
 {
@@ -415,9 +439,13 @@
 "…소, 손님이시군요."
 ],
 "li": [
-"gi"
+"gi",
+"onigiri",
+"dumbbell"
 ],
-"di": []
+"di": [
+"perfume"
+]
 },
 {
 "id": "baseball",
@@ -459,9 +487,13 @@
 "…승부는 봐주는 거 아니야."
 ],
 "li": [
-"baseball"
+"baseball",
+"gyudon",
+"bananamilk"
 ],
-"di": []
+"di": [
+"candy"
+]
 },
 {
 "id": "spiky",
@@ -506,10 +538,13 @@
 "…지갑이 가볍군."
 ],
 "li": [
-"moneyenv"
+"moneyenv",
+"sunglasses",
+"burger"
 ],
 "di": [
-"emptywallet"
+"emptywallet",
+"rulecard"
 ]
 },
 {
@@ -556,9 +591,13 @@
 ],
 "li": [
 "tea",
-"boardgame"
+"boardgame",
+"taiyaki"
 ],
-"di": []
+"di": [
+"puzzle",
+"dumbbell"
+]
 },
 {
 "id": "ponytail",
@@ -601,9 +640,13 @@
 "…묶이는 건 질색이야."
 ],
 "li": [
-"watermelon"
+"watermelon",
+"cocktail",
+"umbrella"
 ],
-"di": []
+"di": [
+"necktie"
+]
 },
 {
 "id": "chiro",
@@ -646,9 +689,13 @@
 "…옛날 얘긴 됐어."
 ],
 "li": [
-"dvd"
+"dvd",
+"coffee",
+"record"
 ],
-"di": []
+"di": [
+"candy"
+]
 },
 {
 "id": "saiki",
@@ -698,7 +745,8 @@
 "parfait"
 ],
 "di": [
-"bug"
+"bug",
+"camera"
 ]
 },
 {
@@ -747,7 +795,9 @@
 "manga",
 "sketch"
 ],
-"di": []
+"di": [
+"wordbook"
+]
 },
 {
 "id": "ahoge",
@@ -791,10 +841,13 @@
 "동생들 또 싸우겠네."
 ],
 "li": [
-"mathbook"
+"mathbook",
+"donut",
+"umbrella"
 ],
 "di": [
-"wordbook"
+"wordbook",
+"novel"
 ]
 },
 {
@@ -837,8 +890,15 @@
 "디타는 잘 있을까.",
 "이 감각을 기록한다."
 ],
-"li": [],
-"di": []
+"li": [
+"umbrella",
+"watch",
+"puzzle"
+],
+"di": [
+"bug",
+"ghostmask"
+]
 },
 {
 "id": "headphone",
@@ -883,10 +943,12 @@
 ],
 "li": [
 "manga",
-"headphones"
+"headphones",
+"ramen"
 ],
 "di": [
-"mooncushion"
+"mooncushion",
+"dumbbell"
 ]
 },
 {
@@ -983,9 +1045,14 @@
 "귀찮다."
 ],
 "li": [
-"console"
+"console",
+"burger",
+"record"
 ],
-"di": []
+"di": [
+"necktie",
+"boardgame"
+]
 },
 {
 "id": "usui",
@@ -1027,9 +1094,13 @@
 "후후."
 ],
 "li": [
-"ingredients"
+"ingredients",
+"cake",
+"macaron"
 ],
-"di": []
+"di": [
+"mayo"
+]
 },
 {
 "id": "izumi",
@@ -1070,9 +1141,14 @@
 "…규칙 위반은 용서 못 해.",
 "날개가 무겁군."
 ],
-"li": [],
+"li": [
+"wing",
+"icecream",
+"scarf"
+],
 "di": [
-"rulecard"
+"rulecard",
+"flowers"
 ]
 },
 {
@@ -1115,8 +1191,14 @@
 "오늘은 느긋하게 가자.",
 "…방금 웃는 얼굴, 괜찮았나."
 ],
-"li": [],
-"di": []
+"li": [
+"panda",
+"crepe",
+"milktea"
+],
+"di": [
+"necktie"
+]
 },
 {
 "id": "hidden",
@@ -1159,8 +1241,12 @@
 "밥은 먹었어? 거짓말하면 안 된다."
 ],
 "li": [
-"cocoa"
+"cocoa",
+"bear",
+"takoyaki"
 ],
-"di": []
+"di": [
+"emptywallet"
+]
 }
 ]

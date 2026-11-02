@@ -22,8 +22,11 @@ const ITEMS = {
 const PRICE = { wall: 80, floor: 80, furn: 200, deco: 60, prop: 40 };
 const STAGES = [['첫 만남', 'first', 0], ['친구', 'friend', 25], ['썸', 'crush', 50], ['연인', 'lover', 75]];
 const stageOf = l => STAGES.filter(s => l >= s[2]).pop();
+const MOODS = ['기분 최고', '설렘', '들뜸', '나른함', '심술', '시무룩', '멍함', '두근두근', '느긋함', '투덜투덜'];
+function moodOf(id) { let h = 0; for (const ch of today() + id) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return MOODS[h % MOODS.length]; }
+function stateOf(o) { if (o.sleeping) return '쿨쿨'; const a = []; if (o.food < 35) a.push('배고픔'); if (o.energy < 30) a.push('졸림'); if (o.fun < 35) a.push('심심함'); if (o.clean < 35) a.push('꼬질꼬질'); return a.join(' · ') || '만족'; }
 const GACHA = 300, DUP = 150, TALK_MAX = 3, LOVE_DAY = 4;   // 애정은 하루 최대 4 → 한 단계(25)에 약 일주일
-function addLove(o, n) { if (!o.lv || o.lv.day !== today()) o.lv = { day: today(), g: 0 }; const g = Math.max(0, Math.min(n, LOVE_DAY - o.lv.g)); o.lv.g += g; o.love = clamp(o.love + g); return g; }
+function addLove(o, n) { if (!o.lv || o.lv.day !== today()) o.lv = { day: today(), g: 0 }; const g = Math.max(0, Math.min(n, LOVE_DAY - o.lv.g)); const before = stageOf(o.love); o.lv.g += g; o.love = clamp(o.love + g); if (stageOf(o.love) !== before) { S.coins += 100; setTimeout(() => toast(`${stageOf(o.love)[0]}이(가) 됐어요! +100코인`), 50); } return g; }
 let CH = [], CHM = {}, TALK = {}, FR = {}, IT = [], ITM = {};
 
 function spr(cat, k, col, sc) {
@@ -120,7 +123,7 @@ function renderNow() {
       <span class="pill coin"><img src="assets/ui/ic_coin.png" alt="">${S.coins.toLocaleString('ko-KR')}</span></div>
     <div class="icons">${ic('give', 'food', '주기')}${ic('play', 'play', '놀기')}${ic('wash', 'wash', '씻기')}${ic('sleep', 'sleep', o.sleeping ? '깨우기' : '재우기', o.sleeping)}${ic('talk', 'talk', '대화')}</div>
     <div class="lcd">${roomHTML(id, o)}</div>
-    <div class="say"><b>${esc(nameOf(id))} <span>${'♥'.repeat(TALK_MAX - t)}</span></b><span id="say">${esc(sayText || defaultSay(id, o))}</span></div>
+    <div class="say"><b>${esc(nameOf(id))} · ${moodOf(id)} · ${stateOf(o)} <span>${'♥'.repeat(TALK_MAX - t)}</span></b><span id="say">${esc(sayText || defaultSay(id, o))}</span></div>
     ${meterHTML(o)}
     <div class="icons">${ic('profile', 'heart', '프로필')}${ic('decor', 'decor', '꾸미기')}${ic('gacha', 'gacha', '가챠')}${ic('dex', 'dex', '도감')}${ic('menu', 'home', '메뉴')}</div>
     <div class="abc"><button class="round" data-act="prev" aria-label="이전 사람">◀</button><button class="round b" data-act="talk" aria-label="말 걸기">♥</button><button class="round" data-act="next" aria-label="다음 사람">▶</button></div>
@@ -191,7 +194,7 @@ function pWho() {
 function pProfile() {
   const id = cur(), o = S.owned[id], c = CHM[id];
   return [`프로필`, `<div class="card" style="padding:0;overflow:hidden"><div style="height:170px;position:relative;background:#bfe6ff;border-bottom:3px solid var(--ink)"><div style="position:absolute;left:50%;margin-left:-60px;bottom:4px;width:120px;height:165px;overflow:hidden">${face(id, 120)}</div></div>
-      <div style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div style="font-size:16px;font-weight:700">${esc(nameOf(id))}</div><div class="label">${esc(c.work)} · ${esc(c.tag)}</div></div><span class="pill">${stageOf(o.love)[0]} · ${o.love}</span></div></div>
+      <div style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div style="font-size:16px;font-weight:700">${esc(nameOf(id))}</div><div class="label">오늘 기분 · ${moodOf(id)}<br>상태 · ${stateOf(o)}</div></div><span class="pill">${stageOf(o.love)[0]} · ${o.love}</span></div></div>
     <form id="callf" class="card" style="display:flex;flex-direction:column;gap:6px">
       ${id === 'hidden' ? `<label class="label" for="hname">이 사람의 이름</label><input class="field" id="hname" maxlength="8" value="${esc(o.name || '')}" placeholder="이름을 지어 주세요">` : ''}
       <label class="label" for="call">나를 부르는 이름</label><div style="display:flex;gap:8px"><input class="field" id="call" maxlength="8" value="${esc(o.call)}"><button class="btn" type="submit">저장</button></div></form>
@@ -246,7 +249,7 @@ function give(k) {
   S.coins -= it.p; o.known = o.known || { l: [], d: [] };
   if (it.t === 'food') o.food = clamp(o.food + 18); else o.fun = clamp(o.fun + 15);
   let msg;
-  if (c.li.includes(k)) { addLove(o, 2); anim.heart = 16; if (!o.known.l.includes(k)) o.known.l.push(k); msg = `(${it.n}! 눈이 반짝였다 ♥)`; }
+  if (c.li.includes(k)) { addLove(o, 2); anim.heart = 16; if (!o.known.l.includes(k)) { o.known.l.push(k); S.coins += 30; } msg = `(${it.n}! 눈이 반짝였다 ♥)`; }
   else if (c.di.includes(k)) { o.love = clamp(o.love - 1); anim.angry = 16; if (!o.known.d.includes(k)) o.known.d.push(k); msg = `(${it.n}… 표정이 굳었다)`; }
   else { addLove(o, 1); msg = `(${it.n}, 고마워)`; }
   sayText = msg; panel = null; document.querySelector('.sheet')?.remove(); save(); render();
@@ -295,7 +298,7 @@ function reveal(id, dup) {
   el.innerHTML = `<div class="rcard"><div class="rstage ${hid ? 'hidden' : ''}"><img class="tw px" src="assets/ui/ic_star.png" alt="" style="left:22px;top:20px"><img class="tw px" src="assets/ui/ic_star.png" alt="" style="right:26px;top:44px">
       <span class="badge" style="${dup ? 'background:#fff' : hid ? 'background:var(--yellow)' : ''}">${dup ? '또 만났다!' : hid ? 'HIDDEN ✦' : 'NEW!'}</span>
       <div style="width:120px;height:165px;margin-bottom:10px;overflow:hidden;position:relative">${face(id, 120)}</div></div>
-    <div class="rbody"><div class="nm">${hid && !dup ? '???' : esc(nameOf(id))}</div><div class="label">${esc(c.work)}</div><div style="font-size:13px;line-height:1.55">“${esc(c.gacha)}”</div>
+    <div class="rbody"><div class="nm">${hid && !dup ? '???' : esc(nameOf(id))}</div><div style="font-size:13px;line-height:1.55">“${esc(c.gacha)}”</div>
       ${dup ? `<span class="pill coin"><img src="assets/ui/ic_coin.png" alt=""> +${DUP}</span>` : ''}
       ${hid && !dup ? `<label class="label" for="hn" style="align-self:flex-start">이 사람의 이름</label><input class="field" id="hn" maxlength="8" placeholder="이름을 지어 주세요">` : ''}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%"><button class="btn white" data-r="again">한 번 더</button><button class="btn" data-r="go">방으로 가기</button></div></div></div>`;
@@ -322,6 +325,7 @@ document.addEventListener('click', e => {
   if (a === 'pick') { S.cur = b.dataset.id; sayText = null; save(); panel = null; document.querySelector('.sheet')?.remove(); return render(); }
   if (a === 'logout') { panel = null; document.querySelector('.sheet')?.remove(); return logOut(); }
   if (a === 'pull') return pull();
+  if (a === 'coin') { const n = 5 + Math.floor(Math.random() * 16); S.coins += n; b.remove(); toast(`+${n}코인`); save(); document.querySelector('.pill.coin').lastChild.textContent = S.coins.toLocaleString('ko-KR'); return; }
   if (a === 'dtab') { panel.tab = v; return renderPanel(); }
   if (a === 'dslot') { panel.slot = v; return renderPanel(); }
   const o = S.owned[cur()]; if (!o) return;
@@ -342,6 +346,7 @@ setInterval(() => {
   A.tick++; A.f++; A.t--;
   if (A.mode === 'walk') { A.x += A.dir * 0.025; if (Math.abs(A.x) > 0.9) { A.dir = -A.dir; A.x = Math.max(-0.9, Math.min(0.9, A.x)); } }
   if (A.t <= 0) { A.mode = pick(MODES); A.t = 12 + Math.floor(Math.random() * 18); if (Math.random() < .5) A.dir = -A.dir; }
+  if (A.tick % 420 === 200 && !$('#drop')) { const r = document.querySelector('.lcd .room'); if (r) { const c = document.createElement('button'); c.id = 'drop'; c.dataset.act = 'coin'; c.setAttribute('aria-label', '동전 줍기'); c.style.cssText = `position:absolute;left:${10 + Math.random() * 75}%;bottom:${4 + Math.random() * 18}%;width:30px;height:30px;padding:0;border:0;background:url(assets/ui/ic_coin.png) center/24px no-repeat;z-index:3;animation:emo 1s ease-in-out infinite`; r.appendChild(c); } }
   if (A.tick % 45 === 0) A.mum = Math.floor(Math.random() * 3); else if (A.tick % 45 === 20) A.mum = -1;
   if (A.heart > 0) A.heart--;
   const sl = o.sleeping, row = sl ? 0 : A.mode === 'walk' ? (A.dir < 0 ? 2 : 3) : A.mode === 'back' ? 1 : 0;
