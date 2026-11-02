@@ -293,7 +293,7 @@ function pTravel() {
   const id = cur(), o = S.owned[id], st = o.trips || {};
   const busy = o.job ? '알바 중이라 못 가요.' : o.sleeping ? '자는 중이라 못 가요.' : '';
   return ['여행', `${busy ? `<div class="card" style="text-align:center;font-size:12px">${busy}</div>` : ''}<div class="trips">${CTRY.map(c => `<button class="trip" data-act="gotrip" data-v="${c.k}" ${busy ? 'disabled' : ''}>
-    <span class="tpic" style="background-image:url(assets/travel/${c.k}.png)"></span>
+    <span class="tpic" style="background-image:url(assets/travel/${c.k}.png?v=2)"></span>
     <span class="tname">${esc(c.n)}${st[c.k] ? ` <small>✓${st[c.k]}</small>` : ''}</span>
     <span class="tprice"><img src="assets/ui/ic_coin.png" alt="" style="width:12px;vertical-align:-2px"> ${c.p}</span></button>`).join('')}</div>`];
 }
@@ -304,7 +304,7 @@ function startTrip(k) {
   S.coins -= c.p; save(); panel = null; document.querySelector('.sheet')?.remove();
   const lines = [...(TRV[id] || [])].sort(() => Math.random() - .5).slice(0, 3).map(l => l.split('{place}').join(c.n).split('{call}').join(o.call || '너'));
   const n = (FR[id] || [4, 4, 4, 4])[3], el = document.createElement('div'); el.className = 'tripview';
-  el.innerHTML = `<div class="tsay"> </div><div class="tstage" style="background-image:url(assets/travel/${k}.png)"><div class="tplace">${esc(c.n)}</div>
+  el.innerHTML = `<div class="tsay"> </div><div class="tstage" style="background-image:url(assets/travel/${k}.png?v=2)"><div class="tplace">${esc(c.n)}</div>
     <div class="twalker"><img class="px" src="assets/ch/${id}.webp" alt=""></div><span class="emo tjoy">♪</span></div>
     <div class="tbar"><i></i></div><button class="btn white tskip" data-tskip="1">바로 돌아오기</button>`;
   document.body.appendChild(el);
