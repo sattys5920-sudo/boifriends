@@ -30,7 +30,7 @@ SIDE = {
     'nifuji':         dict(left=[(3, 0), (3, 1)], right=[(2, 1), (2, 2)]),
     'gintoki':        dict(left=[(2, 1), (2, 2), (2, 3), (2, 4)], right='mirror', fill_inside=True, phase=False, nofill=True),
     'usui':           dict(left='mirror', right=[(2, 1), (2, 2), (2, 3), (2, 4)], up=[0, 1, 2, 4], down=[1, 2, 3, 4]),
-    'izumi':          dict(left='mirror', right=[(2, 1), (2, 2), (3, 2), (3, 3)], fill_frame=3, phase=False),
+    'izumi':          dict(left='mirror', right=[(2, 1), (2, 2), (3, 2), (3, 3)], fill_inside=True, phase=False, nofill=True),
     'ponytail':       dict(left=[(3, 0), (3, 1), (3, 2), (3, 3)], right=[(2, 1), (2, 2), (2, 3), (2, 4)]),
     'spiky':          dict(left=[(3, 0), (3, 1), (3, 2), (3, 3)], right=[(2, 1), (2, 2), (2, 3), (2, 4)], fill_frame=3),
     'kyon':           dict(left=[(3, 0), (3, 1), (3, 2), (3, 3)], right=[(2, 1), (2, 2), (2, 3), (2, 4)]),
