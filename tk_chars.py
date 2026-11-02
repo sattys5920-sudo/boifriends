@@ -21,7 +21,7 @@ SIDE = {
     'punk':           dict(left=[(2, 3), (2, 4), (2, 5), (3, 3)], right=None),
     'bartender':      dict(left=[(2, 0), (2, 1), (2, 2), (3, 1)], right=[(2, 3), (2, 4), (3, 3), (3, 4)]),
     'curly_coat':     dict(left=[(2, 0), (2, 1), (2, 2), (2, 3)], right=None),
-    'baseball':       dict(left=[(3, 0), (3, 1), (3, 2), (2, 0)], right=[(2, 1), (2, 2), (2, 3), (2, 4)], trim_front=True),
+    'baseball':       dict(left=[(3, 0), (3, 1), (3, 2), (2, 0)], right=[(2, 1), (2, 2), (2, 3), (2, 4)], trim_front=True, clean_front=True),
     'ume':            dict(left='mirror', right=[(2, 1), (2, 3), (2, 4), (2, 5)], down=[0, 1, 2, 3], up=[0, 1, 2, 3]),
     'kaguya':         dict(left='mirror', right=[(2, 1), (2, 3), (2, 4), (2, 5)], down=[0, 1, 2, 3], up=[0, 1, 2, 3]),
     'ahoge':          dict(left='mirror', right=[(2, 2), (2, 3), (2, 4), (3, 2)], down=[0, 1, 2], up=[0, 1, 2]),
@@ -238,7 +238,7 @@ def facing(img, ref):
     off = (np.where(skin)[1].mean() - cxb) / w
     return 'down' if abs(off) < .06 else ('left' if off < 0 else 'right')
 
-def trim_side_hair(img, ref):
+def trim_side_hair(img, ref, clean=False):
     """앞모습 누끼: 모자챙 아래부터 턱까지 얼굴 윤곽만 남기고 옆머리를 지워요.
        윤곽은 위아래 줄과 이어지게 부드럽게 다듬어서(파인 곳은 피부로 메움) 테두리선을 다시 그려요"""
     a = img.copy(); h, w = a.shape[:2]; col = a[..., :3].astype(int)
@@ -264,6 +264,39 @@ def trim_side_hair(img, ref):
         for x in (l - 1, r + 1):
             if 0 <= x < w: a[y, x] = OL
     # 모자챙 아래 ~ 얼굴 옆에 생긴 빈 틈: 챙 끝에서 얼굴선까지 부드럽게 머리카락으로 메워요
+    if clean:   # 이마로 내려온 앞머리를 피부색으로: 얼굴 위쪽 30% 줄에서, 모자 바로 아래 붙어 있는 진한 픽셀만
+        top = ys[:max(3, int(len(ys) * .3))]
+        dark = (a[..., :3].astype(int).max(2) < 95) & (a[..., 3] > 0)
+        reg = np.zeros(dark.shape, bool)
+        for y in top: reg[y, L[y] + 1:Rr[y]] = True
+        lab, n = ndimage.label(dark & reg)
+        ids = set(lab[top[0]][lab[top[0]] > 0])
+        for i in ids:
+            r = lab == i
+            a[r] = skc
+        # 얼굴 옆으로 삐친 머리: 위쪽 60% 줄에서 그 줄의 실제 피부 폭 밖은 지우고 외곽선만
+        col2 = a[..., :3].astype(int); skin2 = (a[..., 3] > 0) & (np.abs(col2 - ref).sum(2) < 80)
+        skin2 = ndimage.binary_closing(skin2, iterations=1)
+        for y in ys[:max(3, int(len(ys) * .6))]:
+            xs_ = np.where(skin2[max(0, y - 2):y + 3].any(0))[0]
+            if not len(xs_): continue
+            lo_, hi_ = xs_.min(), xs_.max()
+            a[y, :max(0, lo_ - 1), 3] = 0; a[y, hi_ + 2:, 3] = 0
+            for x in (lo_ - 1, hi_ + 1):
+                if 0 <= x < w: a[y, x] = OL
+        # 모자챙 바로 아래 ~ 얼굴이 넓어지는 줄까지: 이마를 얼굴 폭으로 메워 틈을 없애요
+        widths = {y: np.where(skin2[y])[0] for y in ys[:max(3, int(len(ys) * .6))]}
+        wmax = max((len(v) and v.max() - v.min()) or 0 for v in widths.values())
+        good = next((y for y in sorted(widths) if len(widths[y]) and widths[y].max() - widths[y].min() >= wmax * .85), None)
+        if good is not None:
+            lo_, hi_ = widths[good].min(), widths[good].max()
+            yb = good
+            while yb > 0 and not (a[yb - 1, lo_:hi_ + 1, 3] > 0).all() and good - yb < 12: yb -= 1
+            for y in range(yb, good):
+                row = a[y, lo_:hi_ + 1]; hole = row[:, 3] == 0; row[hole] = skc
+                for x in (lo_ - 1, hi_ + 1):
+                    if 0 <= x < w and a[y, x, 3] == 0: a[y, x] = OL
+        return a
     above = [yy for yy in range(max(0, ys[0] - 4), ys[0]) if (a[yy, :, 3] > 0).any()]
     if above:
         yb = above[-1]; xs_b = np.where(a[yb, :, 3] > 0)[0]; bl, br = xs_b.min(), xs_b.max()
@@ -306,7 +339,7 @@ def build():
             for ri, row in enumerate(rows): groups[force[ri]] += row
         else:
             groups['down'] = [rows[0][k] for k in SIDE[cid].get('down', range(len(rows[0])))]; groups['up'] = [rows[1][k] for k in SIDE[cid].get('up', range(len(rows[1])))]
-            if SIDE[cid].get('trim_front'): ref = skin_ref(rows[0][0]['img']); groups['down'] = [dict(f, img=trim_side_hair(f['img'], ref)) for f in rows[0]]
+            if SIDE[cid].get('trim_front'): ref = skin_ref(rows[0][0]['img']); groups['down'] = [dict(f, img=trim_side_hair(f['img'], ref, SIDE[cid].get('clean_front', False))) for f in rows[0]]
             sd = SIDE[cid]
             groups['left'] = [rows[r][k] for r, k in sd['left']] if sd['left'] != 'mirror' else [dict(rows[r][k], img=rows[r][k]['img'][:, ::-1]) for r, k in sd['right']]
             groups['right'] = [rows[r][k] for r, k in sd['right']] if sd['right'] and sd['right'] != 'mirror' else [dict(f, img=f['img'][:, ::-1]) for f in groups['left']]
@@ -327,6 +360,13 @@ def build():
                 dst[:] = np.where(s[..., 3:4] > 0, s, dst)
         meta.append(dict(id=cid, name=name, map=mp, tile=tile, lines=lines, base=len(sheet_rows) * 4, n=counts,
                          found={d: len(groups[d]) for d in DIRS}))
+        a = block[..., 3] > 0; rgb = block[..., :3].astype(int)
+        light = (rgb.min(2) > 150) & ((rgb.max(2) - rgb.min(2)) < 28)
+        for _ in range(2):
+            edge = a & ~ndimage.binary_erosion(a); a &= ~(edge & light)
+        lab, n = ndimage.label(a)
+        if n: sz = ndimage.sum(a, lab, range(1, n + 1)); a &= ~np.isin(lab, 1 + np.where(sz < 8)[0])
+        block[..., 3] = np.where(a, block[..., 3], 0)
         sheet_rows.append(block)
         print(cid, 'rows', [len(r) for r in rows], {d: len(groups[d]) for d in DIRS})
     return sheet_rows, meta
