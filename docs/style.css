@@ -135,3 +135,5 @@ img,.px{image-rendering:pixelated;image-rendering:crisp-edges}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .itm{display:inline-block;overflow:hidden;position:relative}
 .itm img{display:block;max-width:none;image-rendering:pixelated}
+.icons.six{grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
+.icons.six .ic{font-size:9px}
