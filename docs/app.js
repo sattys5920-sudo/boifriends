@@ -109,7 +109,8 @@ function meterHTML(o) {
 }
 const ic = (act, img, label, pressed) => `<button class="ic" data-act="${act}" ${pressed ? 'aria-pressed="true"' : ''}><img src="assets/ui/ic_${img}.png" alt="">${label}</button>`;
 
-function render() {
+function render() { const y = window.scrollY; renderNow(); window.scrollTo(0, y); }
+function renderNow() {
   if (!user) return renderStart();
   if (!Object.keys(S.owned).length) { app.innerHTML = shellEmpty(); if (panel?.k !== 'gacha') openPanel('gacha'); return; }
   const id = cur(), o = S.owned[id], t = o.talk.day === today() ? o.talk.n : 0;
@@ -230,7 +231,7 @@ function pGacha() {
 function pDex() {
   const all = CH, met = all.filter(c => S.owned[c.id]).length;
   return ['도감', `<div class="card"><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700"><span>만난 사람</span><span>${met} / ${all.length}</span></div><div class="bar" style="margin-top:6px"><i style="width:${met / all.length * 100}%;background-color:var(--mint)"></i></div></div>
-    <div class="grid4">${all.map(c => { const o = S.owned[c.id]; return `<div class="tile"><div class="pic">${o ? face(c.id, 72).replace('position:absolute;', 'position:absolute;') : '<div class="sil"><i class="h"></i><i class="bd">?</i></div>'}</div><span style="color:${o ? 'inherit' : 'var(--ink2)'}">${o ? esc(nameOf(c.id)) : '???'}</span>${o ? `<span class="label">${stageOf(o.love)[0]}</span>` : ''}</div>`; }).join('')}</div>`];
+    <div class="grid4">${all.map(c => { const o = S.owned[c.id]; return `<div class="tile"><div class="pic">${o ? `<div class="one">${face(c.id, 66)}</div>` : '<div class="sil"><i class="h"></i><i class="bd">?</i></div>'}</div><span class="nm" style="color:${o ? 'inherit' : 'var(--ink2)'}">${o ? esc(nameOf(c.id)) : '???'}</span></div>`; }).join('')}</div>`];
 }
 function pGive() {
   const tab = panel.tab || 'food';

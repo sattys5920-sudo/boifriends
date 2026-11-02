@@ -5,7 +5,7 @@
   --shell:#a6ecd6;--shell2:#8fe3cc;
 }
 *{box-sizing:border-box}
-html,body{margin:0;height:100%}
+html,body{margin:0;height:100%;-webkit-text-size-adjust:100%;touch-action:manipulation}
 body{background-color:var(--sky);background-image:radial-gradient(var(--dot) 2px,transparent 2.5px);background-size:22px 22px;color:var(--ink);font-family:Galmuri11,monospace;-webkit-font-smoothing:none;overscroll-behavior:none}
 button,input{font-family:inherit;color:inherit}
 button{cursor:pointer}
@@ -80,7 +80,7 @@ img,.px{image-rendering:pixelated;image-rendering:crisp-edges}
 .btn.white{background:var(--white)}
 .btn.yellow{background:var(--yellow)}
 .btn:disabled{opacity:.5}
-.field{height:44px;border-radius:10px;border:3px solid var(--ink);padding:0 12px;font-size:14px;background:var(--lcd);width:100%}
+.field{height:44px;border-radius:10px;border:3px solid var(--ink);padding:0 12px;font-size:16px;background:var(--lcd);width:100%}
 .label{font-size:11px;color:var(--ink2)}
 .tabs{display:flex;gap:4px}
 .tab{flex:1;height:34px;border:3px solid var(--ink);border-bottom:0;border-radius:10px 10px 0 0;background:#bfe6ff;font-size:11px;font-weight:700;padding:0}
@@ -96,7 +96,8 @@ img,.px{image-rendering:pixelated;image-rendering:crisp-edges}
 .item small{font-weight:700}
 .tile{border:3px solid var(--ink);border-radius:12px;background:var(--white);overflow:hidden;display:flex;flex-direction:column;align-items:center;padding-bottom:4px;font-size:10px;text-align:center;gap:3px}
 .tile .pic{width:100%;height:74px;position:relative;overflow:hidden;border-bottom:3px solid var(--ink);background:#bfe6ff}
-.tile .pic img{position:absolute;left:50%;margin-left:-36px;top:0;width:72px}
+.tile .pic .one{position:absolute;left:50%;top:0;width:66px;height:74px;margin-left:-33px;overflow:hidden}
+.tile .nm{width:100%;padding:0 3px;font-size:9px;letter-spacing:-.5px;white-space:nowrap;overflow:hidden;text-overflow:clip;line-height:1.6}
 .sil{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;background:#eef6fb}
 .sil i{display:block;background:#b7c6d4}
 .sil .h{width:28px;height:28px;border-radius:46% 46% 40% 40%}
