@@ -38,7 +38,7 @@ SIDE = {
     'saiki':          dict(left=[(2, 1), (2, 2), (2, 3), (2, 4)], right=None),
     'nozaki':         dict(left=[(3, 0), (3, 1), (3, 2)], right=[(2, 0), (2, 1), (2, 3), (2, 4)]),
     'shima':          dict(left=[(3, 1), (3, 2), (3, 3), (3, 4)], right=[(2, 1), (2, 2), (2, 3), (2, 4)]),
-    'mint':           dict(left=[(2, 1), (2, 2), (2, 3), (2, 4)], right=None),
+    'mint':           dict(left=[(2, 1), (2, 2), (2, 3), (2, 4)], right=None, outline=True),
     'karate':         dict(left=[(2, 1), (2, 2), (3, 1), (3, 2)], right=[(2, 4), (3, 3), (3, 4)], fill_inside=True),
 }
 PHASE_ALL = True
@@ -96,7 +96,7 @@ def checker_phase_bg(im):
     frac = ndimage.uniform_filter(match.astype(float), 7)
     return (match & (frac > .72)) | (frac > .9)
 
-def extract(path, fill_inside=False, fill_frame=0, phase=False, nofill=False):
+def extract(path, fill_inside=False, fill_frame=0, phase=False, nofill=False, outline=False):
     im = np.asarray(Image.open(path).convert('RGB')).astype(int); Hh, Ww = im.shape[:2]
     mx, mn = im.max(2), im.min(2)
     cand = (mx - mn < 30) & (mn > 135); S = max(Ww / 1152, Hh / 928)   # 시트 크기·비율이 달라도 같은 기준으로
@@ -204,6 +204,16 @@ def extract(path, fill_inside=False, fill_frame=0, phase=False, nofill=False):
                 lab4, n4 = ndimage.label(sub)
                 if n4 > 1: sz = ndimage.sum(sub, lab4, range(1, n4 + 1)); sub = (lab4 == (1 + int(np.argmax(sz)))) | (sub & np.isin(lab4, 1 + np.where(sz > sz.max() * .02)[0]))
                 m[y0:y1, x0:x1] = sub
+        if outline:   # 진한 외곽선으로 둘러싸인 안쪽(흰 신발 등)은 캐릭터로
+            ys, xs = np.where(m); bb = (slice(max(0, ys.min() - 4), ys.max() + 5), slice(max(0, xs.min() - 4), xs.max() + 5))
+            ol = (im[bb].max(2) < 110) & ndimage.binary_dilation(m[bb], iterations=6)
+            enc = ndimage.binary_fill_holes(ndimage.binary_closing(ol | m[bb], iterations=1)) & ~m[bb]
+            hl, hn = ndimage.label(enc)
+            sub = m[bb].copy()
+            for i in range(1, hn + 1):
+                r = hl == i
+                if r.sum() < 900 * S * S and grey[bb][r].mean() < .35: sub |= r
+            m = m.copy(); m[bb] = sub
         ys, xs = np.where(m); y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
         crop = rgba[y0:y1, x0:x1].copy(); crop[..., 3] = np.where(m[y0:y1, x0:x1], 255, 0)
         frames.append(dict(img=crop, cx=(x0 + x1) / 2, cy=(y0 + y1) / 2, top=y0, bot=y1))
@@ -257,11 +267,11 @@ def trim_side_hair(img, ref):
     above = [yy for yy in range(max(0, ys[0] - 4), ys[0]) if (a[yy, :, 3] > 0).any()]
     if above:
         yb = above[-1]; xs_b = np.where(a[yb, :, 3] > 0)[0]; bl, br = xs_b.min(), xs_b.max()
-        n = max(4, int((ys[-1] - ys[0]) * .45))
+        n = max(4, int((ys[-1] - ys[0]) * .6)); pel, per = -1, 10 ** 6
+        lf = min(L[k] for k in ys[:n]); rf = max(Rr[k] for k in ys[:n])   # 얼굴 폭은 고정값으로: 줄마다 들쭉날쭉하지 않게
         for i, y in enumerate(ys[:n]):
-            t = i / n; win = [k for k in ys if abs(k - y) <= 5]
-            l = min(L[k] for k in win); r = max(Rr[k] for k in win)
-            el = int(round(bl + (l - bl) * t)); er = int(round(br + (r - br) * t))
+            t = (i / n) ** .8; win = [k for k in ys if abs(k - y) <= 5]; l = min(L[k] for k in win); r = max(Rr[k] for k in win)
+            el = min(l - 1, max(pel, int(round(bl + (lf - bl) * t)))); er = max(r + 1, min(per, int(round(br + (rf - br) * t)))); pel, per = el, er
             for x in range(max(0, el), l - 1):
                 if a[y, x, 3] == 0 or True: a[y, x] = hair
             for x in range(r + 2, min(w, er + 1)):
@@ -288,7 +298,7 @@ def shrink(img, scale):
 def build():
     sheet_rows, meta = [], []
     for (cid, fn, name, mp, tile, lines, force) in SHEETS:
-        rows = extract('chars_src/' + fn, fill_inside=SIDE.get(cid, {}).get('fill_inside', False), fill_frame=SIDE.get(cid, {}).get('fill_frame', 0), phase=SIDE.get(cid, {}).get('phase', PHASE_ALL), nofill=SIDE.get(cid, {}).get('nofill', False))
+        rows = extract('chars_src/' + fn, fill_inside=SIDE.get(cid, {}).get('fill_inside', False), fill_frame=SIDE.get(cid, {}).get('fill_frame', 0), phase=SIDE.get(cid, {}).get('phase', PHASE_ALL), nofill=SIDE.get(cid, {}).get('nofill', False), outline=SIDE.get(cid, {}).get('outline', False))
         allf = [(ri, f) for ri, row in enumerate(rows) for f in row]
         hmax = max(f['img'].shape[0] for _, f in allf); scale = TARGET * R / hmax
         groups = {d: [] for d in DIRS}
