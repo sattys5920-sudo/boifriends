@@ -143,7 +143,7 @@ function renderNow() {
   if (!Object.keys(S.owned).length) { app.innerHTML = shellEmpty(); if (panel?.k !== 'gacha') openPanel('gacha'); return; }
   const id = cur(), o = S.owned[id], t = o.talk.day === today() ? o.talk.n : 0;
   app.innerHTML = `<div class="shell">
-    <div class="brand"><img src="assets/ui/ic_heart.png" alt="">BOIFRIENDS POCKET</div>
+    <div class="brand"><img src="assets/ui/ic_heart.png" alt="">YEONIGOTCHI</div>
     <div class="topbar"><button class="who" data-act="who" aria-label="돌볼 사람 바꾸기"><span class="face">${face(id, 32)}</span><span>${esc(nameOf(id))}</span><img src="assets/ui/ic_back.png" alt="" style="width:14px;transform:rotate(-90deg)"></button>
       <span style="display:flex;gap:6px">${S.mail && S.mail.length ? `<button class="pill" data-act="mail" aria-label="편지 ${S.mail.length}통"><img src="assets/ui/ic_mail.png" alt="">${S.mail.length}</button>` : ''}<span class="pill coin"><img src="assets/ui/ic_coin.png" alt="">${S.coins.toLocaleString('ko-KR')}</span></span></div>
     <div class="icons">${ic('give', 'food', '주기')}${ic('play', 'play', '놀기')}${ic('wash', 'wash', '씻기')}${ic('sleep', 'sleep', o.sleeping ? '깨우기' : '재우기', o.sleeping)}${ic('talk', 'talk', '대화')}</div>
@@ -156,7 +156,7 @@ function renderNow() {
   if (panel) renderPanel();
 }
 function shellEmpty() {
-  return `<div class="shell"><div class="brand"><img src="assets/ui/ic_heart.png" alt="">BOIFRIENDS POCKET</div>
+  return `<div class="shell"><div class="brand"><img src="assets/ui/ic_heart.png" alt="">YEONIGOTCHI</div>
     <div class="lcd"><div class="room" style="background-color:#cfeaff"></div></div>
     <button class="btn yellow" data-act="gacha" style="width:100%"><img src="assets/ui/ic_gacha.png" alt="" style="width:20px;vertical-align:-4px"> 가챠</button></div>`;
 }
@@ -171,7 +171,7 @@ let startMode = 'join';
 function renderStart() {
   app.innerHTML = `<div class="start">
     <div class="egg"><div class="scr"><img src="assets/ui/ic_heart.png" alt="" style="width:40px;margin-bottom:18px"></div></div>
-    <div style="text-align:center"><h1>보이프렌즈 포켓</h1></div>
+    <div style="text-align:center"><h1>여니고치</h1></div>
     <div class="card" style="width:100%;padding:0;overflow:hidden">
       <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:3px solid var(--ink)">
         <button data-act="mode-join" style="height:44px;border:0;font-weight:700;background:${startMode === 'join' ? 'var(--yellow)' : '#fff'}">가입하기</button>
