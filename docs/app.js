@@ -13,8 +13,8 @@ const PAL = [['화이트', '#f7f9fb'], ['아이보리', '#fbf3df'], ['크림', '
 const VAR = [['원래 색', 'conic-gradient(#ffd76a 0 25%,#8fe3cc 0 50%,#8ccff5 0 75%,#ff8fb3 0)']].concat(PAL);
 const SHEET = { furn: { cw: 44, ch: 44, sw: 1364, sh: 440 }, deco: { cw: 44, ch: 24, sw: 1364, sh: 192 }, prop: { cw: 20, ch: 26, sw: 620, sh: 520 } };
 const ITEMS = {
-  wall: [['mintdot', '땡땡이'], ['skystripe', '줄무늬'], ['heart', '하트'], ['starnight', '별'], ['lemon', '체크'], ['cloud', '구름'], ['washi', '일본식'], ['plaid', '타탄'], ['lilac', '반짝이']],
-  floor: [['wood', '원목 마루'], ['tatami', '다다미'], ['minttile', '타일'], ['pinkrug', '카펫'], ['checker', '체커'], ['grass', '잔디'], ['skytile', '큰 타일']],
+  wall: [['plain', '기본'], ['mintdot', '땡땡이'], ['skystripe', '줄무늬'], ['heart', '하트'], ['starnight', '별'], ['lemon', '체크'], ['cloud', '구름'], ['washi', '일본식'], ['plaid', '타탄'], ['lilac', '반짝이']],
+  floor: [['plain', '기본'], ['wood', '원목 마루'], ['tatami', '다다미'], ['minttile', '타일'], ['pinkrug', '카펫'], ['checker', '체커'], ['grass', '잔디'], ['skytile', '큰 타일']],
   furn: [['bed', '침대', 44, 28], ['sofa', '소파', 40, 26], ['shelf', '책장', 26, 44], ['desk', '책상', 36, 30], ['kotatsu', '코타츠', 40, 22], ['fridge', '냉장고', 20, 38], ['tv', 'TV', 34, 32], ['wardrobe', '옷장', 28, 44], ['amp', '앰프·기타', 30, 34], ['lowtable', '좌식 밥상', 36, 24]],
   deco: [['window', '창문', 28, 24], ['clock', '벽시계', 16, 16], ['poster', '포스터', 18, 24], ['wallshelf', '선반', 30, 16], ['garland', '가랜드', 44, 10], ['mirror', '거울', 16, 22], ['frame', '액자', 24, 18], ['stars', '별 스티커', 20, 20]],
   prop: [['soba', '소바', 16, 12], ['strawmilk', '딸기우유', 10, 16], ['coffeejelly', '커피젤리', 14, 14], ['console', '게임기', 18, 10], ['guitar', '기타', 12, 26], ['baseball', '배트·공', 20, 18], ['manga', '만화책', 16, 14], ['jump', '점프', 14, 18], ['headphones', '헤드폰', 18, 14], ['cat', '고양이', 18, 14], ['plant', '화분', 14, 20], ['camera', '카메라', 18, 12], ['watermelon', '수박', 18, 14], ['milk', '우유병', 8, 16], ['curry', '카레', 18, 10], ['sketch', '스케치북', 16, 14], ['gi', '도복 띠', 18, 10], ['wing', '깃털', 12, 18], ['tobacco', '재떨이', 14, 8], ['glasses', '안경 케이스', 16, 8]]
@@ -62,7 +62,7 @@ async function logIn(id, pw) {
   lsSet('bp_session', id); return { uid: 'local_' + id, id };
 }
 async function logOut() { if (fb) await fb.AU.signOut(fb.auth); localStorage.removeItem('bp_session'); user = null; S = null; render(); }
-function fresh() { return { v: 1, at: Date.now(), coins: GACHA, owned: {}, cur: null, items: ['mintdot', 'cloud', 'wood', 'checker', 'bed', 'window', 'plant'], day: today(), last: Date.now() }; }
+function fresh() { return { v: 1, at: Date.now(), coins: GACHA, owned: {}, cur: null, items: ['plain', 'bed'], day: today(), last: Date.now() }; }
 async function loadSave() {
   let s = lsGet(localKey());
   if (fb) { try { const d = await fb.FS.getDoc(fb.FS.doc(fb.db, 'saves', user.uid)); if (d.exists()) { const r = JSON.parse(d.data().json); if (!s || r.at >= s.at) s = r; } } catch (e) { console.warn(e); } }
@@ -84,7 +84,7 @@ function tickTime() {
     if (o.food < 10 && o.fun < 10) o.love = clamp(o.love - 2 * h / 24);
   }
   S.last = now;
-  if (S.day !== today()) { S.day = today(); S.coins += 100; toast('오늘의 출석 보너스 +100코인'); }
+  if (S.day !== today()) { S.day = today(); S.coins += 150; toast('출석 +150코인'); }
 }
 
 // ---------- 화면 ----------
@@ -92,14 +92,23 @@ let panel = null, anim = { x: 0, dir: 1, mode: 'walk', t: 20, f: 0, mum: -1, hea
 const cur = () => S.cur && S.owned[S.cur] ? S.cur : Object.keys(S.owned)[0];
 const nameOf = id => id === 'hidden' ? (S.owned.hidden?.name || '???') : CHM[id].name;
 
+const tileUrl = (cat, k) => k === 'plain' ? 'none' : `url(assets/decor/${cat}_${k}.png)`;
+const slot = (cat, v, pos) => v ? spr(cat, v[0], v[1], 2).replace('POS', pos) : '';
+// 잠: 침대에 뒷모습으로 눕히고 이불 덮기 (침대가 없으면 바닥에 이불)
+function sleepHTML(id, r) {
+  const pos = r.a && r.a[0] === 'bed' ? 'left:3%;bottom:20%' : r.b && r.b[0] === 'bed' ? 'right:3%;bottom:20%' : 'left:calc(50% - 44px);bottom:6%';
+  const s = 36 / 96;
+  return `<div style="position:absolute;width:88px;height:56px;${pos};z-index:2">
+    <div style="position:absolute;left:11px;top:1px;width:36px;height:50px;overflow:hidden;transform:rotate(-90deg)"><img class="px" src="assets/ch/${id}.webp" alt="" style="width:${384 * s}px;height:${528 * s}px;max-width:none;margin-top:${-132 * s}px"></div>
+    <div style="position:absolute;left:19px;top:19px;width:67px;height:29px;border:2px solid var(--ink);border-radius:8px 6px 4px 4px;background:#8ccff5;background-image:repeating-linear-gradient(90deg,transparent 0 10px,rgba(255,255,255,.5) 10px 13px)"></div>
+    <span class="emo" style="left:8px;top:-22px;color:#5b6bd6">Z z z</span></div>`;
+}
 function roomHTML(id, o, scale) {
   const r = o.room;
-  return `<div class="room pw-${r.wp}" style="background-color:${PAL[r.wc][1]};background-image:url(assets/decor/wall_${r.wp}.png)">
-    <div class="floor" style="background-color:${PAL[r.fc][1]};background-image:url(assets/decor/floor_${r.fl}.png)"></div>
-    ${spr('deco', r.dc[0], r.dc[1], 2).replace('POS', 'left:6%;top:6%')}
-    ${spr('furn', r.a[0], r.a[1], 2).replace('POS', 'left:3%;bottom:20%')}
-    ${spr('furn', r.b[0], r.b[1], 2).replace('POS', 'right:3%;bottom:20%')}
-    ${spr('prop', r.pr[0], r.pr[1], 2).replace('POS', 'left:28%;bottom:4%;z-index:2')}
+  return `<div class="room" style="background-color:${PAL[r.wc][1]};background-image:${tileUrl('wall', r.wp)}">
+    <div class="floor" style="background-color:${PAL[r.fc][1]};background-image:${tileUrl('floor', r.fl)}"></div>
+    ${slot('deco', r.dc, 'left:6%;top:6%')}${slot('furn', r.a, 'left:3%;bottom:20%')}${slot('furn', r.b, 'right:3%;bottom:20%')}${slot('prop', r.pr, 'left:28%;bottom:4%;z-index:2')}
+    ${id && o.sleeping ? sleepHTML(id, r) : ''}
     ${id ? `<div class="shadow" id="shd"></div><div class="man" id="man"><img class="px" src="assets/ch/${id}.webp" alt="${esc(nameOf(id))}"></div><span class="emo" id="emo" hidden></span><span class="mumble" id="mum" hidden></span>` : ''}
     ${o.sleeping ? '<div class="night"></div>' : ''}
   </div>`;
@@ -209,21 +218,22 @@ function slots(title, all, found, bg) {
 function pDecor() {
   const id = cur(), o = S.owned[id], r = o.room, tab = panel.tab || 'wall', slot = panel.slot || 'a';
   const key = tab === 'wall' ? 'wp' : tab === 'floor' ? 'fl' : tab === 'furn' ? slot : tab === 'deco' ? 'dc' : 'pr';
-  const pal = tab === 'wall' || tab === 'floor' ? PAL : VAR, curCol = tab === 'wall' ? r.wc : tab === 'floor' ? r.fc : r[key][1];
+  const pal = tab === 'wall' || tab === 'floor' ? PAL : VAR, curCol = tab === 'wall' ? r.wc : tab === 'floor' ? r.fc : (r[key] ? r[key][1] : 0);
   const tabs = [['wall', '벽지'], ['floor', '바닥'], ['furn', '가구'], ['deco', '벽 장식'], ['prop', '소품']].map(t => `<button class="tab" role="tab" aria-selected="${t[0] === tab}" data-act="dtab" data-v="${t[0]}">${t[1]}</button>`).join('');
   const items = ITEMS[tab].map(it => {
-    const k = it[0], on = tab === 'wall' ? r.wp === k : tab === 'floor' ? r.fl === k : r[key][0] === k, have = S.items.includes(k);
-    const th = tab === 'wall' || tab === 'floor' ? `<div class="th" style="background-color:${PAL[tab === 'wall' ? r.wc : r.fc][1]};background-image:url(assets/decor/${tab}_${k}.png)"></div>`
+    const k = it[0], on = tab === 'wall' ? r.wp === k : tab === 'floor' ? r.fl === k : !!r[key] && r[key][0] === k, have = S.items.includes(k);
+    const th = tab === 'wall' || tab === 'floor' ? `<div class="th" style="background-color:${PAL[tab === 'wall' ? r.wc : r.fc][1]};background-image:${tileUrl(tab, k)}"></div>`
       : `<div class="th">${spr(tab, k, curCol, Math.max(it[2], it[3]) > 24 ? 1 : 2).replace('POS', 'position:relative')}</div>`;
     return `<button class="item" data-act="ditem" data-v="${k}" aria-pressed="${on}">${th}<span>${it[1]}</span><small style="color:${on ? '#b8336a' : have ? '#1f7a60' : 'inherit'}">${on ? '사용 중' : have ? '보유' : PRICE[tab] + '코인'}</small></button>`;
   }).join('');
+  const none = tab === 'wall' || tab === 'floor' ? '' : `<button class="item" data-act="ditem" data-v="none" aria-pressed="${!r[key]}"><div class="th" style="font-size:20px;color:var(--ink2)">✕</div><span>없음</span><small></small></button>`;
   return ['방 꾸미기', `<div class="lcd" style="padding:4px">${roomHTML(null, o)}</div>
     <div class="tabs" role="tablist">${tabs}</div>
     <div class="tabbody" style="display:flex;flex-direction:column;gap:8px">
       ${tab === 'furn' ? `<div style="display:flex;gap:6px;align-items:center"><span class="label">놓을 자리</span>${[['a', '왼쪽'], ['b', '오른쪽']].map(s => `<button class="pill" data-act="dslot" data-v="${s[0]}" style="${s[0] === slot ? 'background:var(--yellow)' : ''}">${s[1]}</button>`).join('')}</div>` : ''}
       <div class="label">색상 · ${pal[curCol][0]}</div>
       <div class="sw">${pal.map((c, i) => `<button data-act="dcol" data-v="${i}" aria-label="${c[0]}" title="${c[0]}" aria-pressed="${i === curCol}" style="background:${c[1]}"></button>`).join('')}</div>
-      <div class="grid4">${items}</div></div>`];
+      <div class="grid4">${none}${items}</div></div>`];
 }
 function pGacha() {
   const first = !Object.keys(S.owned).length;
@@ -264,9 +274,9 @@ function act(kind) {
   const id = cur(), o = S.owned[id]; if (!o) return;
   const say = t => { sayText = t; };
   if (o.sleeping && kind !== 'sleep') { say('(쿨쿨…)'); return render(); }
-  if (kind === 'feed') { if (o.food >= 95) say('(배불러…)'); else { o.food = clamp(o.food + 25); addLove(o, 1); S.coins += 10; anim.heart = 10; say('(냠냠)'); } }
-  if (kind === 'play') { if (o.energy < 15) say('(피곤해…)'); else { o.fun = clamp(o.fun + 22); o.energy = clamp(o.energy - 12); addLove(o, 1); S.coins += 10; anim.heart = 10; anim.mode = 'hop'; anim.t = 10; say('(신난다!)'); } }
-  if (kind === 'wash') { if (o.clean >= 95) say('(반짝반짝)'); else { o.clean = clamp(o.clean + 35); S.coins += 5; say('(뽀득뽀득)'); } }
+  if (kind === 'feed') { if (o.food >= 95) say('(배불러…)'); else { o.food = clamp(o.food + 25); addLove(o, 1); S.coins += 15; anim.heart = 10; say('(냠냠)'); } }
+  if (kind === 'play') { if (o.energy < 15) say('(피곤해…)'); else { o.fun = clamp(o.fun + 22); o.energy = clamp(o.energy - 12); addLove(o, 1); S.coins += 15; anim.heart = 10; anim.mode = 'hop'; anim.t = 10; say('(신난다!)'); } }
+  if (kind === 'wash') { if (o.clean >= 95) say('(반짝반짝)'); else { o.clean = clamp(o.clean + 35); S.coins += 10; say('(뽀득뽀득)'); } }
   if (kind === 'sleep') { o.sleeping = !o.sleeping; say(o.sleeping ? '(잘 자)' : '(좋은 아침)'); }
   if (kind === 'talk') {
     if (o.talk.day !== today()) o.talk = { day: today(), n: 0, i: o.talk.i };
@@ -274,7 +284,7 @@ function act(kind) {
     else {
       const lines = TALK[id][stageOf(o.love)[1]]; o.talk.i = (o.talk.i + 1) % lines.length; o.talk.n++;
       say(lines[o.talk.i].map(l => l.split('{call}').join(o.call)).join('\n'));
-      addLove(o, 1); o.fun = clamp(o.fun + 3); S.coins += 15; anim.heart = 12;
+      addLove(o, 1); o.fun = clamp(o.fun + 3); S.coins += 20; anim.heart = 12;
     }
   }
   save(); render();
@@ -290,7 +300,7 @@ async function pull() {
   const pool = CH.filter(c => c.id !== 'hidden');
   const got = Math.random() < 0.02 ? 'hidden' : pick(pool).id, dup = !!S.owned[got];
   if (dup) S.coins += DUP;
-  else { const c = CHM[got]; S.owned[got] = { love: 0, food: 70, fun: 60, clean: 80, energy: 80, call: '너', room: JSON.parse(JSON.stringify(c.room)), talk: { day: '', n: 0, i: -1 }, met: Date.now(), sleeping: false }; }
+  else { const c = CHM[got]; S.owned[got] = { love: 0, food: 70, fun: 60, clean: 80, energy: 80, call: '너', room: { wp: 'plain', wc: 1, fl: 'plain', fc: 8, a: ['bed', 0], b: null, dc: null, pr: null }, talk: { day: '', n: 0, i: -1 }, met: Date.now(), sleeping: false }; }
   S.cur = got; save(); pull.busy = false; reveal(got, dup);
 }
 function reveal(id, dup) {
@@ -325,15 +335,16 @@ document.addEventListener('click', e => {
   if (a === 'pick') { S.cur = b.dataset.id; sayText = null; save(); panel = null; document.querySelector('.sheet')?.remove(); return render(); }
   if (a === 'logout') { panel = null; document.querySelector('.sheet')?.remove(); return logOut(); }
   if (a === 'pull') return pull();
-  if (a === 'coin') { const n = 5 + Math.floor(Math.random() * 16); S.coins += n; b.remove(); toast(`+${n}코인`); save(); document.querySelector('.pill.coin').lastChild.textContent = S.coins.toLocaleString('ko-KR'); return; }
+  if (a === 'coin') { const n = 10 + Math.floor(Math.random() * 21); S.coins += n; b.remove(); toast(`+${n}코인`); save(); document.querySelector('.pill.coin').lastChild.textContent = S.coins.toLocaleString('ko-KR'); return; }
   if (a === 'dtab') { panel.tab = v; return renderPanel(); }
   if (a === 'dslot') { panel.slot = v; return renderPanel(); }
   const o = S.owned[cur()]; if (!o) return;
   const tab = panel?.tab || 'wall', slot = panel?.slot || 'a', key = tab === 'wall' ? 'wp' : tab === 'floor' ? 'fl' : tab === 'furn' ? slot : tab === 'deco' ? 'dc' : 'pr';
-  if (a === 'dcol') { const i = +v; if (tab === 'wall') o.room.wc = i; else if (tab === 'floor') o.room.fc = i; else o.room[key] = [o.room[key][0], i]; save(); render(); return renderPanel(); }
+  if (a === 'dcol') { const i = +v; if (tab === 'wall') o.room.wc = i; else if (tab === 'floor') o.room.fc = i; else if (o.room[key]) o.room[key] = [o.room[key][0], i]; save(); render(); return renderPanel(); }
   if (a === 'ditem') {
+    if (v === 'none') { o.room[key] = null; save(); render(); return renderPanel(); }
     if (!S.items.includes(v)) { if (S.coins < PRICE[tab]) return toast('코인이 부족해요.'); S.coins -= PRICE[tab]; S.items.push(v); toast(`구매했어요. -${PRICE[tab]}코인`); }
-    if (tab === 'wall' || tab === 'floor') o.room[key] = v; else o.room[key] = [v, o.room[key][1]];
+    if (tab === 'wall' || tab === 'floor') o.room[key] = v; else o.room[key] = [v, o.room[key] ? o.room[key][1] : 0];
     save(); render(); return renderPanel();
   }
 });
@@ -346,16 +357,16 @@ setInterval(() => {
   A.tick++; A.f++; A.t--;
   if (A.mode === 'walk') { A.x += A.dir * 0.025; if (Math.abs(A.x) > 0.9) { A.dir = -A.dir; A.x = Math.max(-0.9, Math.min(0.9, A.x)); } }
   if (A.t <= 0) { A.mode = pick(MODES); A.t = 12 + Math.floor(Math.random() * 18); if (Math.random() < .5) A.dir = -A.dir; }
-  if (A.tick % 420 === 200 && !$('#drop')) { const r = document.querySelector('.lcd .room'); if (r) { const c = document.createElement('button'); c.id = 'drop'; c.dataset.act = 'coin'; c.setAttribute('aria-label', '동전 줍기'); c.style.cssText = `position:absolute;left:${10 + Math.random() * 75}%;bottom:${4 + Math.random() * 18}%;width:30px;height:30px;padding:0;border:0;background:url(assets/ui/ic_coin.png) center/24px no-repeat;z-index:3;animation:emo 1s ease-in-out infinite`; r.appendChild(c); } }
+  if (A.tick % 240 === 120 && !$('#drop')) { const r = document.querySelector('.lcd .room'); if (r) { const c = document.createElement('button'); c.id = 'drop'; c.dataset.act = 'coin'; c.setAttribute('aria-label', '동전 줍기'); c.style.cssText = `position:absolute;left:${10 + Math.random() * 75}%;bottom:${4 + Math.random() * 18}%;width:30px;height:30px;padding:0;border:0;background:url(assets/ui/ic_coin.png) center/24px no-repeat;z-index:3;animation:emo 1s ease-in-out infinite`; r.appendChild(c); } }
   if (A.tick % 45 === 0) A.mum = Math.floor(Math.random() * 3); else if (A.tick % 45 === 20) A.mum = -1;
   if (A.heart > 0) A.heart--;
   const sl = o.sleeping, row = sl ? 0 : A.mode === 'walk' ? (A.dir < 0 ? 2 : 3) : A.mode === 'back' ? 1 : 0;
   const col = A.mode === 'walk' && !sl ? A.f % n[row] : 0, x = sl ? 0 : A.x, left = `calc(50% + ${x * 38}% - 33px)`;
   const img = man.firstElementChild; img.style.marginLeft = -col * 66 + 'px'; img.style.marginTop = -row * 91 + 'px';
-  man.style.left = left; man.style.transform = sl ? 'rotate(-90deg) translateX(-14px)' : ''; man.classList.toggle('hop', A.mode === 'hop' && !sl);
+  man.style.left = left; man.style.display = sl ? 'none' : ''; $('#shd').style.display = sl ? 'none' : ''; man.classList.toggle('hop', A.mode === 'hop' && !sl);
   $('#shd').style.left = `calc(50% + ${x * 38}% - 27px)`;
   if (A.angry > 0) A.angry--;
-  const emo = $('#emo'), e = sl ? ['Z z z', '#5b6bd6'] : A.angry > 0 ? ['…!?', '#c0392b'] : A.heart > 0 ? ['♥ ♥', '#e0457b'] : o.food < 40 ? ['꼬르륵…', '#c47a1a'] : o.clean < 35 ? ['킁킁…', '#5b8a3c'] : o.fun > 75 ? ['♪', '#2f8f73'] : null;
+  const emo = $('#emo'), e = sl ? null : A.angry > 0 ? ['…!?', '#c0392b'] : A.heart > 0 ? ['♥ ♥', '#e0457b'] : o.food < 40 ? ['꼬르륵…', '#c47a1a'] : o.clean < 35 ? ['킁킁…', '#5b8a3c'] : o.fun > 75 ? ['♪', '#2f8f73'] : null;
   emo.hidden = !e; if (e) { emo.textContent = e[0]; emo.style.color = e[1]; emo.style.left = `calc(50% + ${x * 38}% + 14px)`; emo.style.bottom = sl ? '30%' : '52%'; }
   const mum = $('#mum'), mt = !sl && A.mum >= 0 ? CHM[id].mumble[A.mum] : '';
   mum.hidden = !mt; if (mt) { mum.textContent = mt; mum.style.left = `clamp(4px, calc(50% + ${x * 38}% - 70px), calc(100% - 64%))`; }
