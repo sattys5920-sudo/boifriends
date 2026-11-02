@@ -232,7 +232,7 @@ function drawMouth(o, W, FW, m){   // o: ImageData.data (가로 W = FW×20)
 }
 
 // ---------- 주인공 아바타 (LPC 부품 조립: lpc_parts/, 작가·라이선스는 lpc/credits.json) ----------
-let AVD = null, AVC = null; const AVIMG = {}, AS = 30;   // AS: 맵에서 아바타 한 칸 크기 (64칸 → 30칸)
+let AVD = null, AVC = null; const AVIMG = {}, AS = 32;   // AS: 맵에서 아바타 한 칸 크기 (64칸 → 32칸, NPC 도트 크기와 같은 0.5px)
 const CS = 0.6;   // 맵 위 캐릭터 크기 배율 (시트는 R배 고해상도라 화면 해상도로 부드럽게 줄여 그려요)
 const AV_ROWS = [['hair', '머리 모양'], ['hairC', '머리색', 'hair'], ['skinC', '피부색', 'skin'], ['eyeC', '눈 색', 'eye'], ['face', '표정'], ['lip', '입'],
   ['top', '상의'], ['topC', '상의 색', 'cloth'], ['legs', '하의'], ['legsC', '하의 색', 'bottom'], ['feet', '신발'], ['feetC', '신발 색', 'shoe'],
@@ -623,46 +623,37 @@ function hud() {
 
 // ---------- 그리기 ----------
 // (fx, fy): 발밑 위치. 돌려주는 값은 머리 위 y
-// 도트화: 고해상도 시트를 화면 픽셀에 딱 맞는 도트 격자로 줄여요 (NPC와 여니가 같은 도트 크기)
+// 도트화: 고해상도 시트를 LPC와 같은 도트 크기(맵 0.5px)로 줄이고 살짝 선명하게 해요
+const PS = 0.5;
 let PIX = null;
 function pixelate(src, sx, sy, sw, sh, tw, th, out, ox, oy) {
   const t = document.createElement('canvas'); t.width = tw; t.height = th; const x = t.getContext('2d', { willReadFrequently: true });
   x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high'; x.drawImage(src, sx, sy, sw, sh, 0, 0, tw, th);
-  const id = x.getImageData(0, 0, tw, th), d = id.data;
-  for (let i = 0; i < d.length; i += 4) {
-    if (d[i + 3] < 120) { d[i + 3] = 0; continue; }
-    const a = d[i + 3] / 255; d[i + 3] = 255;
-    for (let k = 0; k < 3; k++) d[i + k] = Math.round(Math.min(255, d[i + k] / a) / 17) * 17;   // 색 단계를 줄여 도트 느낌
-  }
-  // 바깥 테두리 픽셀을 어둡게: 도트 그림처럼 외곽선
-  const o = new Uint8ClampedArray(d);
+  const id = x.getImageData(0, 0, tw, th), d = id.data, o = new Uint8ClampedArray(d.length);
+  for (let i = 0; i < d.length; i += 4) { const a = d[i + 3]; if (a < 120) continue; for (let k = 0; k < 3; k++) d[i + k] = Math.min(255, d[i + k] * 255 / a); }
   for (let y = 0; y < th; y++) for (let xx = 0; xx < tw; xx++) {
-    const i = (y * tw + xx) * 4; if (!d[i + 3]) continue;
-    const edge = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([u, v]) => { const X = xx + u, Y = y + v; return X < 0 || Y < 0 || X >= tw || Y >= th || !d[(Y * tw + X) * 4 + 3]; });
-    if (edge) { o[i] = d[i] * .35 + 10; o[i + 1] = d[i + 1] * .35 + 8; o[i + 2] = d[i + 2] * .35 + 18; }
+    const i = (y * tw + xx) * 4; if (d[i + 3] < 120) continue; o[i + 3] = 255;
+    for (let k = 0; k < 3; k++) {   // 언샤프: 주변 평균과의 차이를 키워 눈·입선을 살려요
+      let sum = 0, n = 0;
+      for (const [u, v] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = xx + u, Y = y + v; if (X >= 0 && Y >= 0 && X < tw && Y < th && d[(Y * tw + X) * 4 + 3] >= 120) { sum += d[(Y * tw + X) * 4 + k]; n++; } }
+      o[i + k] = n ? d[i + k] + .7 * (d[i + k] - sum / n) : d[i + k];
+    }
   }
   x.putImageData(new ImageData(o, tw, th), 0, 0); out.drawImage(t, ox, oy);
 }
 function pixSheets(sc) {
-  const k = Math.max(1, Math.round(sc * .5)), ps = k / sc, key = sc + '/' + (AVC ? AVC.id : 0);
-  if (PIX && PIX.key === key) return PIX;
-  const R = CH.R || 1, cw = Math.round(CH.FW * CS / ps), ch = Math.round(CH.FH * CS / ps);
+  if (PIX) return PIX;
+  const R = CH.R || 1, cw = Math.round(CH.FW * CS / PS), ch = Math.round(CH.FH * CS / PS);
   const rows = Math.round(CHIMG.height / (CH.FH * R)), cols = Math.round(CHIMG.width / (CH.FW * R));
-  let npc = PIX && PIX.sc === sc ? PIX.npc : null;
-  if (!npc) {
-    npc = document.createElement('canvas'); npc.width = cols * cw; npc.height = rows * ch; const g2 = npc.getContext('2d');
-    // 캐릭터 한 명(4줄)씩 잘라서 줄여요
-    for (let r = 0; r < rows; r += 4) pixelate(CHIMG, 0, r * CH.FH * R, cols * CH.FW * R, 4 * CH.FH * R, cols * cw, 4 * ch, g2, 0, r * ch);
-  }
-  let av = null, aw = Math.round(AS / ps);
-  if (AVC) { av = document.createElement('canvas'); av.width = 20 * aw; av.height = aw; pixelate(AVC.big, 0, 0, 20 * 64, 64, 20 * aw, aw, av.getContext('2d'), 0, 0); }
-  return PIX = { key, sc, ps, npc, cw, ch, av, aw };
+  const npc = document.createElement('canvas'); npc.width = cols * cw; npc.height = rows * ch; const g2 = npc.getContext('2d');
+  for (let r = 0; r < rows; r += 4) pixelate(CHIMG, 0, r * CH.FH * R, cols * CH.FW * R, 4 * CH.FH * R, cols * cw, 4 * ch, g2, 0, r * ch);
+  return PIX = { sc, npc, cw, ch };
 }
 // (fx, fy): 발밑 위치. 돌려주는 값은 머리 위 y
 function drawChar(ctx, c, dir, fi, fx, fy) {
-  const P = PIX, snap = v => Math.round(v * P.sc) / P.sc; ctx.imageSmoothingEnabled = false;
-  if (c.av && P.av) { const col = AVD.dirs[dir] + (fi % 5), top = fy - AS * 62 / 64; ctx.drawImage(P.av, col * P.aw, 0, P.aw, P.aw, snap(fx - AS / 2), snap(top), P.aw * P.ps, P.aw * P.ps); return Math.round(top + AS * .2); }
-  const di = CH.dirs.indexOf(dir), n = c.n[dir] || 1, w = P.cw * P.ps, h = P.ch * P.ps, top = fy - h + CS;
+  ctx.imageSmoothingEnabled = false; const sc = devicePixelRatio * zoom(), snap = v => Math.round(v * sc) / sc;
+  if (c.av && AVC) { const col = AVD.dirs[dir] + (fi % 5), top = fy - AS * 62 / 64; ctx.drawImage(AVC.big, col * 64, 0, 64, 64, snap(fx - AS / 2), snap(top), AS, AS); return Math.round(top + AS * .2); }
+  const P = PIX, di = CH.dirs.indexOf(dir), n = c.n[dir] || 1, w = P.cw * PS, h = P.ch * PS, top = fy - h + CS;
   ctx.drawImage(P.npc, (fi % n) * P.cw, (c.base + di) * P.ch, P.cw, P.ch, snap(fx - w / 2), snap(top), w, h); return Math.round(top); }
 function dirOf(dx, dy) { const sx = (dx - dy) * 2, sy = dx + dy; return Math.abs(sx) > Math.abs(sy) ? (sx > 0 ? 'right' : 'left') : (sy > 0 ? 'down' : 'up'); }
 function camera() {
