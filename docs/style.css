@@ -159,3 +159,7 @@ img,.px{image-rendering:pixelated;image-rendering:crisp-edges}
 .tskip{max-width:440px;width:100%}
 
 .sleepleft{position:absolute;left:50%;top:10%;transform:translateX(-50%);z-index:6;background:var(--white);border:3px solid var(--ink);border-radius:10px;padding:5px 10px;font-size:11px;white-space:nowrap}
+
+.buybar{display:flex;align-items:center;gap:6px;background:var(--yellow2);border:3px solid var(--ink);border-radius:12px;padding:6px 8px;box-shadow:0 3px 0 var(--ink)}
+.buybar span{flex:1;min-width:0;font-size:12px}
+.buybar .btn{height:38px;font-size:12px;padding:0 10px}

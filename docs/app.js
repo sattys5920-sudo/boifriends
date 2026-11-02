@@ -235,7 +235,9 @@ function slots(title, all, found, bg) {
     : `<span style="width:44px;height:44px;border:2px dashed var(--ink2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--ink2)">?</span>`).join('')}</div></div>`;
 }
 function pDecor() {
-  const id = cur(), o = S.owned[id], r = o.room, tab = panel.tab || 'wall', slot = panel.slot || 'a';
+  const id = cur(), o = S.owned[id], tab = panel.tab || 'wall', slot = panel.slot || 'a';
+  const pv = panel.pv && panel.pv.tab === tab ? panel.pv : null, r = JSON.parse(JSON.stringify(o.room));
+  if (pv) { if (tab === 'wall' || tab === 'floor') r[pv.key] = pv.val; else r[pv.key] = [pv.val, pv.col]; if (tab === 'wall') r.wc = pv.col ?? r.wc; if (tab === 'floor') r.fc = pv.col ?? r.fc; }
   const key = tab === 'wall' ? 'wp' : tab === 'floor' ? 'fl' : tab === 'furn' ? slot : tab === 'deco' ? 'dc' : 'pr';
   const pal = tab === 'wall' || tab === 'floor' ? PAL : VAR, curCol = tab === 'wall' ? r.wc : tab === 'floor' ? r.fc : (r[key] ? r[key][1] : 0);
   const tabs = [['wall', '벽지'], ['floor', '바닥'], ['furn', '가구'], ['deco', '벽 장식'], ['prop', '소품']].map(t => `<button class="tab" role="tab" aria-selected="${t[0] === tab}" data-act="dtab" data-v="${t[0]}">${t[1]}</button>`).join('');
@@ -243,10 +245,12 @@ function pDecor() {
     const k = it[0], on = tab === 'wall' ? r.wp === k : tab === 'floor' ? r.fl === k : !!r[key] && r[key][0] === k, have = S.items.includes(k);
     const th = tab === 'wall' || tab === 'floor' ? `<div class="th" style="background-color:${PAL[tab === 'wall' ? r.wc : r.fc][1]};background-image:${tileUrl(tab, k)}"></div>`
       : `<div class="th">${spr(tab, k, curCol, Math.max(it[2], it[3]) > 24 ? 1 : 2).replace('POS', 'position:relative')}</div>`;
-    return `<button class="item" data-act="ditem" data-v="${k}" aria-pressed="${on}">${th}<span>${it[1]}</span><small style="color:${on ? '#b8336a' : have ? '#1f7a60' : 'inherit'}">${on ? '사용 중' : have ? '보유' : PRICE[tab] + ' 코인'}</small></button>`;
+    return `<button class="item" data-act="ditem" data-v="${k}" aria-pressed="${on}">${th}<span>${it[1]}</span><small style="color:${on && !(pv && pv.val === k) ? '#b8336a' : have ? '#1f7a60' : 'inherit'}">${pv && pv.val === k ? '미리 보기' : on ? '사용 중' : have ? '보유' : PRICE[tab] + ' 코인'}</small></button>`;
   }).join('');
   const none = tab === 'wall' || tab === 'floor' ? '' : `<button class="item" data-act="ditem" data-v="none" aria-pressed="${!r[key]}"><div class="th" style="font-size:20px;color:var(--ink2)">✕</div><span>없음</span><small></small></button>`;
-  return ['방 꾸미기', `<div class="lcd" style="padding:4px">${roomHTML(null, o)}</div>
+  const nm = pv ? ITEMS[tab].find(x => x[0] === pv.val)[1] : '';
+  const buy = pv ? `<div class="buybar"><span><b>${esc(nm)}</b> 미리 보는 중</span><button class="btn white" data-act="dcancel">취소</button><button class="btn yellow" data-act="dbuy" ${S.coins < PRICE[tab] ? 'disabled' : ''}>사기 · ${PRICE[tab]} 코인</button></div>` : '';
+  return ['방 꾸미기', `<div class="lcd" style="padding:4px">${roomHTML(null, Object.assign({}, o, { room: r }))}</div>${buy}
     <div class="tabs" role="tablist">${tabs}</div>
     <div class="tabbody" style="display:flex;flex-direction:column;gap:8px">
       ${tab === 'furn' ? `<div style="display:flex;gap:6px;align-items:center"><span class="label">놓을 자리</span>${[['a', '왼쪽'], ['b', '오른쪽']].map(s => `<button class="pill" data-act="dslot" data-v="${s[0]}" style="${s[0] === slot ? 'background:var(--yellow)' : ''}">${s[1]}</button>`).join('')}</div>` : ''}
@@ -269,7 +273,9 @@ function pGive() {
   const tab = panel.tab || 'food';
   const tabs = [['food', '먹을 것'], ['gift', '선물']].map(t => `<button class="tab" role="tab" aria-selected="${t[0] === tab}" data-act="gtab" data-v="${t[0]}">${t[1]}</button>`).join('');
   const base = tab === 'food' ? `<button class="item" data-act="feed"><div class="th"><img class="px" src="assets/ui/ic_food.png" alt="" style="width:40px"></div><span>밥</span><small>무료</small></button>` : '';
-  return ['주기', `<div class="tabs" role="tablist">${tabs}</div><div class="tabbody"><div class="grid4">${base}${IT.filter(x => x.t === tab).map(x => `<button class="item" data-act="giveit" data-v="${x.k}"><div class="th">${icon(x.k, 40)}</div><span>${esc(x.n)}</span><small><img src="assets/ui/ic_coin.png" alt="" style="width:10px;vertical-align:-1px"> ${x.p}</small></button>`).join('')}</div></div>`];
+  const sel = panel.sel && ITM[panel.sel];
+  const bar = sel ? `<div class="buybar"><span><b>${esc(sel.n)}</b></span><button class="btn white" data-act="gcancel">취소</button><button class="btn yellow" data-act="giveit" data-v="${sel.k}" ${S.coins < sel.p ? 'disabled' : ''}>주기 · ${sel.p} 코인</button></div>` : '';
+  return ['주기', `${bar}<div class="tabs" role="tablist">${tabs}</div><div class="tabbody"><div class="grid4">${base}${IT.filter(x => x.t === tab).map(x => `<button class="item" data-act="givesel" data-v="${x.k}" aria-pressed="${panel.sel === x.k}"><div class="th">${icon(x.k, 40)}</div><span>${esc(x.n)}</span><small><img src="assets/ui/ic_coin.png" alt="" style="width:10px;vertical-align:-1px"> ${x.p}</small></button>`).join('')}</div></div>`];
 }
 function give(k) {
   const id = cur(), o = S.owned[id], it = ITM[k], c = CHM[id];
@@ -402,21 +408,32 @@ document.addEventListener('click', e => {
   if (a === 'gotrip') return startTrip(v);
   if (a === 'dojob') { const o = S.owned[cur()], j = JOBS[+v]; o.job = { until: Date.now() + j[1] * 60000, pay: j[2] }; o.sleeping = false; save(); panel = null; document.querySelector('.sheet')?.remove(); sayText = '(다녀올게)'; return render(); }
   if (a === 'getmail') { const n = (S.mail || []).reduce((t, m) => t + m.c, 0); S.coins += n; S.mail = []; save(); panel = null; document.querySelector('.sheet')?.remove(); toast(`+${n} 코인`); return render(); }
-  if (a === 'gtab') { panel.tab = v; return renderPanel(); }
+  if (a === 'gtab') { panel.tab = v; panel.sel = null; return renderPanel(); }
+  if (a === 'givesel') { panel.sel = v; return renderPanel(); }
+  if (a === 'gcancel') { panel.sel = null; return renderPanel(); }
   if (a === 'giveit') return give(v);
   if (a === 'close') return closePanel();
   if (a === 'pick') { S.cur = b.dataset.id; sayText = null; save(); panel = null; document.querySelector('.sheet')?.remove(); return render(); }
   if (a === 'logout') { panel = null; document.querySelector('.sheet')?.remove(); return logOut(); }
   if (a === 'pull') return pull();
   if (a === 'coin') { const n = 10 + Math.floor(Math.random() * 21); S.coins += n; b.remove(); dropStyle = null; toast(`+${n} 코인`); save(); document.querySelector('.pill.coin').lastChild.textContent = S.coins.toLocaleString('ko-KR'); return; }
-  if (a === 'dtab') { panel.tab = v; return renderPanel(); }
-  if (a === 'dslot') { panel.slot = v; return renderPanel(); }
+  if (a === 'dtab') { panel.tab = v; panel.pv = null; return renderPanel(); }
+  if (a === 'dcancel') { panel.pv = null; return renderPanel(); }
+  if (a === 'dslot') { panel.slot = v; panel.pv = null; return renderPanel(); }
   const o = S.owned[cur()]; if (!o) return;
   const tab = panel?.tab || 'wall', slot = panel?.slot || 'a', key = tab === 'wall' ? 'wp' : tab === 'floor' ? 'fl' : tab === 'furn' ? slot : tab === 'deco' ? 'dc' : 'pr';
+  if (a === 'dcol' && panel.pv && panel.pv.tab === tab) { panel.pv.col = +v; return renderPanel(); }
   if (a === 'dcol') { const i = +v; if (tab === 'wall') o.room.wc = i; else if (tab === 'floor') o.room.fc = i; else if (o.room[key]) o.room[key] = [o.room[key][0], i]; save(); render(); return renderPanel(); }
+  if (a === 'dbuy' && panel.pv) {
+    const pv = panel.pv; if (S.coins < PRICE[tab]) return toast('코인이 부족해요.');
+    S.coins -= PRICE[tab]; S.items.push(pv.val);
+    if (tab === 'wall') { o.room.wp = pv.val; o.room.wc = pv.col; } else if (tab === 'floor') { o.room.fl = pv.val; o.room.fc = pv.col; } else o.room[pv.key] = [pv.val, pv.col];
+    panel.pv = null; toast(`샀어요. -${PRICE[tab]} 코인`); save(); render(); return renderPanel();
+  }
   if (a === 'ditem') {
     if (v === 'none') { o.room[key] = null; save(); render(); return renderPanel(); }
-    if (!S.items.includes(v)) { if (S.coins < PRICE[tab]) return toast('코인이 부족해요.'); S.coins -= PRICE[tab]; S.items.push(v); toast(`구매했어요. -${PRICE[tab]} 코인`); }
+    if (!S.items.includes(v)) { const cc = tab === 'wall' ? o.room.wc : tab === 'floor' ? o.room.fc : (o.room[key] ? o.room[key][1] : 0); panel.pv = { tab, key, val: v, col: cc }; return renderPanel(); }
+    panel.pv = null;
     if (tab === 'wall' || tab === 'floor') o.room[key] = v; else o.room[key] = [v, o.room[key] ? o.room[key][1] : 0];
     save(); render(); return renderPanel();
   }
