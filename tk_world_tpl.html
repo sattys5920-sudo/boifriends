@@ -1,0 +1,693 @@
+<title>짝 찾기 산책</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* 레이아웃: 화면 전체가 걷는 맵. 위에 지명·날짜·기력·돈, 오른쪽(폰은 아래)에 대화 로그. 밤 색 한 가지로 고정 */
+@font-face { font-family: 'Galmuri11'; src: url(data:font/woff2;base64,__GALMURI__) format('woff2'); font-display: block; }
+:root {
+  --void: #15131f; --panel: #221e30; --panel-2: #2e2940; --line: #4a4260;
+  --ink: #f2e8d8; --ink-dim: #b8aec8; --lamp: #ffc86a; --lamp-ink: #2a1c10; --sea: #6ad0c8; --rose: #ff8aa8; --bad: #ff7a6a;
+  --pix: 'Galmuri11', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { background: var(--void); color: var(--ink); font-family: var(--pix); font-size: 13px; overflow: hidden; -webkit-user-select: none; user-select: none; }
+#cv { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; image-rendering: pixelated; }
+button { font: inherit; color: inherit; cursor: pointer; pointer-events: auto; }
+input { font: inherit; }
+.btn { background: var(--panel-2); border: 2px solid var(--line); padding: 7px 12px; box-shadow: 0 2px 0 #0008; }
+.btn:hover:not(:disabled) { border-color: var(--lamp); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.main { background: var(--lamp); color: var(--lamp-ink); border-color: #1c1420; }
+:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
+.hud { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 10px); left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; pointer-events: none; }
+.chip { pointer-events: auto; background: var(--panel); border: 2px solid var(--line); box-shadow: 0 2px 0 #0008; padding: 6px 10px; line-height: 1.35; }
+.chip b { color: var(--lamp); font-weight: normal; display: block; font-size: 15px; }
+.chip span { color: var(--ink-dim); font-size: 11px; }
+.stat { display: grid; gap: 4px; min-width: 150px; }
+.stat .row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.stat .row span { color: var(--ink); font-size: 12px; }
+.pips { display: flex; gap: 2px; align-items: center; }
+.pips i { width: 9px; height: 9px; background: var(--panel-2); border: 1px solid var(--line); }
+.pips i.on { background: var(--rose); border-color: #c85a78; }
+.pips.low i.on { background: var(--bad); }
+.hud .spacer { flex: 1; }
+.act { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); z-index: 3;
+  background: var(--lamp); color: var(--lamp-ink); border: 2px solid #1c1420; padding: 10px 18px; font-size: 14px; box-shadow: 0 3px 0 #000a; white-space: nowrap; max-width: calc(100% - 32px); overflow: hidden; text-overflow: ellipsis; }
+.act kbd { font: inherit; opacity: .6; margin-left: 6px; }
+.log { position: fixed; display: grid; grid-template-rows: auto 1fr auto; background: var(--panel); border: 2px solid var(--line); box-shadow: 0 4px 0 #000a; z-index: 2;
+  right: max(16px, env(safe-area-inset-right, 0px)); top: calc(env(safe-area-inset-top, 0px) + 80px); bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); width: min(380px, 42vw); }
+.log.talking { border-color: var(--lamp); }
+.log header { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 2px solid var(--line); color: var(--ink-dim); }
+.log header b { color: var(--lamp); font-weight: normal; }
+.log header button { background: none; border: 0; color: var(--ink-dim); padding: 2px 6px; }
+.feed { overflow-y: auto; padding: 10px 12px; display: grid; gap: 8px; align-content: start; user-select: text; -webkit-user-select: text; }
+.ln { line-height: 1.6; font-size: 13px; min-width: 0; }
+.ln .who { color: var(--lamp); margin-right: 6px; }
+.ln.me .who { color: var(--sea); }
+.ln.n { color: var(--ink-dim); }
+.ln.sys { color: var(--rose); font-size: 12px; border-top: 1px dashed var(--line); padding-top: 6px; }
+.ln.day { color: var(--lamp); text-align: center; font-size: 12px; letter-spacing: .1em; }
+.choices { display: grid; gap: 6px; padding: 10px; border-top: 2px solid var(--line); }
+.choices:empty { display: none; }
+.choices .btn { text-align: left; line-height: 1.45; }
+.choices .btn small { color: var(--ink-dim); margin-left: 6px; }
+@media (max-width: 700px) {
+  .log { left: max(16px, env(safe-area-inset-left, 0px)); width: auto; top: auto; height: min(44vh, 360px); }
+  .log:not([hidden]) ~ .act { bottom: calc(env(safe-area-inset-bottom, 0px) + min(44vh, 360px) + 28px); }
+}
+.toast { position: fixed; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 84px); background: var(--panel); border: 2px solid var(--line); padding: 8px 14px; max-width: calc(100% - 32px); text-align: center; line-height: 1.5; z-index: 5; }
+.banner { position: fixed; left: 50%; top: 30%; transform: translate(-50%, -50%); font-size: 26px; color: var(--lamp); text-shadow: 0 3px 0 #000; pointer-events: none; transition: opacity .6s; white-space: nowrap; }
+.fade { position: fixed; inset: 0; background: var(--void); opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 6; }
+.fade.on { opacity: 1; }
+.sheet { position: fixed; inset: 0; background: #15131ff2; overflow-y: auto; z-index: 8; padding-block: calc(env(safe-area-inset-top, 0px) + 20px) calc(env(safe-area-inset-bottom, 0px) + 28px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.sheet-in { max-width: 720px; margin: 0 auto; display: grid; gap: 14px; }
+.sheet h1 { font-weight: normal; color: var(--lamp); font-size: 30px; margin: 8px 0 0; text-wrap: balance; }
+.sheet h2 { font-weight: normal; color: var(--lamp); font-size: 18px; margin: 0; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.lead { color: var(--ink-dim); line-height: 1.7; margin: 0; max-width: 60ch; }
+.lead b { color: var(--ink); font-weight: normal; }
+.label { color: var(--ink-dim); font-size: 11px; letter-spacing: .08em; }
+.field input { background: var(--panel); border: 2px solid var(--line); color: var(--ink); padding: 8px 10px; width: 14em; max-width: 100%; }
+.picks { display: flex; flex-wrap: wrap; gap: 8px; }
+.pick { background: var(--panel); border: 2px solid var(--line); padding: 6px 8px 4px; display: grid; justify-items: center; gap: 2px; font-size: 11px; color: var(--ink-dim); }
+.pick.on { border-color: var(--lamp); color: var(--lamp); }
+.pick canvas { width: 48px; height: 66px; image-rendering: pixelated; }
+.row-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+.card { background: var(--panel); border: 2px solid var(--line); padding: 10px; display: grid; gap: 5px; align-content: start; min-width: 0; }
+.card.here, .card.got { border-color: var(--lamp); }
+.card .nm { font-size: 14px; line-height: 1.5; }
+.card .sub { color: var(--ink-dim); font-size: 11px; line-height: 1.5; }
+.card .who { color: var(--sea); font-size: 11px; line-height: 1.5; }
+.card .end { color: var(--rose); font-size: 12px; line-height: 1.5; }
+.bar { height: 6px; background: var(--panel-2); border: 1px solid var(--line); }
+.bar i { display: block; height: 100%; background: var(--rose); }
+.bar.match i { background: var(--sea); }
+@media (prefers-reduced-motion: reduce) { .banner, .fade { transition: none; } }
+</style>
+
+<canvas id="cv" aria-label="걷는 맵"></canvas>
+<div class="hud">
+  <div class="chip"><b id="mapName">우리 동네</b><span id="areaName"></span></div>
+  <div class="chip stat" aria-label="오늘 상태">
+    <div class="row"><span id="dayTxt">1일째 · 아침</span><span id="yenTxt">3,000엔</span></div>
+    <div class="row"><span>기력</span><span class="pips" id="hpPips"></span></div>
+    <div class="row" id="giftRow" hidden><span>선물</span><span id="giftTxt">0</span></div>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn" id="logBtn" type="button">로그</button>
+  <button class="btn" id="atlasBtn" type="button">지도</button>
+</div>
+<section class="log" id="logp" hidden aria-label="대화 로그">
+  <header><b id="logTitle">로그</b><button type="button" id="logClose">닫기</button></header>
+  <div class="feed" id="feed" aria-live="polite"></div>
+  <div class="choices" id="choices"></div>
+</section>
+<button class="act" id="act" type="button" hidden></button>
+<div class="toast" id="toast" hidden></div>
+<div class="banner" id="banner" style="opacity:0"></div>
+<div class="fade" id="fade"></div>
+
+<div class="sheet" id="title" hidden>
+  <div class="sheet-in">
+    <h1>짝 찾기 산책</h1>
+    <p class="lead">도쿄와 도와 왕국을 걸으며 사람들에게 말을 걸어요. 처음 만난 사람마다 <b>내가 사귈지</b>, <b>어울리는 짝을 찾아줄지</b> 정하고, 14일 안에 마음을 움직이세요. 기력이 바닥나면 쓰러져서 이번 회차는 끝나요. 이룬 엔딩은 도감에 남고, 엔딩 하나마다 다음 회차 용돈이 300엔씩 늘어나요.</p>
+    <label class="label" for="nameIn">내 이름</label>
+    <div class="field"><input id="nameIn" maxlength="8" autocomplete="off" placeholder="이름 (8자까지)"></div>
+    <div class="label">걷는 모습</div>
+    <div class="picks" id="picks"></div>
+    <div class="row-btns"><button class="btn main" id="newRun" type="button">새 회차 시작</button><button class="btn" id="contRun" type="button" hidden>이어하기</button></div>
+    <div class="label" id="cloudTxt">세이브 불러오는 중…</div>
+    <div class="label" id="dexLabel">엔딩 도감</div>
+    <div class="cards" id="dex"></div>
+  </div>
+</div>
+<div class="sheet" id="atlas" hidden>
+  <div class="sheet-in">
+    <h2>지도와 사람들 <button class="btn" id="atlasClose" type="button">닫기</button></h2>
+    <p class="lead">방향키·WASD로 걷거나 화면을 눌러서 걸어요. 사람·문·물건 앞에서 스페이스(또는 노란 버튼), 선택지는 숫자 키로도 골라요. 길 끝 표지판 사이로 걸어 나가면 옆 동네, 역과 트램은 열차(500엔)예요. 머리 위 <b>!</b>는 처음 만나는 사람, <b>♥</b>·<b>♣</b>는 오늘 아직 이야기하지 않은 사람이에요.</p>
+    <div id="atlasBody"></div>
+  </div>
+</div>
+<div class="sheet" id="endp" hidden>
+  <div class="sheet-in">
+    <h1 id="endTitle">14일이 지났어요</h1>
+    <p class="lead" id="endLead"></p>
+    <div class="cards" id="endCards"></div>
+    <div class="row-btns"><button class="btn main" id="toTitle" type="button">타이틀로</button></div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const cv = $('cv'), g = cv.getContext('2d');
+let DATA, ST, M, IMG = {}, CHIMG, CH, PL, map = null, me = { x: 0, y: 0, dir: 'down' }, keys = {}, target = null, near = null, fading = false, last = performance.now(), walkT = 0;
+let META, RUN = null, busy = false;
+const REGION = { tk_street: '도쿄', tk_school: '도쿄', tk_shibuya: '도쿄', tk_harajuku: '도쿄', tk_ikebukuro: '도쿄', tk_asakusa: '도쿄', tk_ginza: '도쿄', tk_roppongi: '도쿄', tk_inaka: '시골', acca_badon: '도와 왕국', acca_dowa: '도와 왕국', tk_geofront: '지오프론트' };
+const load = src => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
+// 세이브: 브라우저에 바로 쓰고, 로그인한 사람은 claude.ai 서버(본인만 보이는 칸)에도 2초 뒤 모아서 저장해요
+const CLOUD = { ref: null, data: {}, timer: 0, state: 'local' };
+const store = {
+  get(k) { if (k in CLOUD.data) return CLOUD.data[k]; try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} CLOUD.data[k] = v; cloudSave(); }
+};
+function cloudSave() {
+  if (!CLOUD.ref) return; clearTimeout(CLOUD.timer);
+  CLOUD.timer = setTimeout(() => { CLOUD.ref.set({ v: 1, at: Date.now(), json: JSON.stringify(CLOUD.data) }).then(() => setCloud('saved')).catch(() => setCloud('error')); }, 2000);
+}
+function setCloud(st) { CLOUD.state = st; const el = $('cloudTxt'); if (el) el.textContent = { local: '이 기기에만 저장', saved: '서버에 저장됨', error: '서버 저장 실패 · 이 기기에는 저장됨', loading: '세이브 불러오는 중…' }[st]; }
+async function cloudInit() {
+  setCloud('loading');
+  try {
+    const [db, user] = await Promise.all([claude.use('db'), claude.use('user')]);
+    const id = user && await user.id();
+    if (!db || !id) { setCloud('local'); return; }
+    CLOUD.ref = db.doc('data/users/' + id + '/save');
+    const snap = await Promise.race([CLOUD.ref.get(), new Promise((_, no) => setTimeout(() => no(new Error('timeout')), 10000))]);
+    if (snap.exists) { try { Object.assign(CLOUD.data, JSON.parse(snap.data().json || '{}')); } catch (e) {} }
+    else { for (const k of ['tkw_meta', 'tkw_run']) { try { const v = JSON.parse(localStorage.getItem(k)); if (v) CLOUD.data[k] = v; } catch (e) {} } cloudSave(); }
+    setCloud('saved');
+  } catch (e) { CLOUD.ref = null; setCloud('local'); }
+}
+const yenFmt = n => n.toLocaleString('ko-KR') + '엔';
+const hasBatchim = w => { const c = w.charCodeAt(w.length - 1); return c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 > 0; };
+const josa = (w, a, b) => w + (hasBatchim(w) ? a : b);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function P(m, tx, ty) { return [m.OX + (tx - ty) * 8, m.OY + (tx + ty) * 4]; }
+function toTile(m, sx, sy) { const a = (sx - m.OX) / 8, b = (sy - m.OY) / 4; return [(a + b) / 2, (b - a) / 2]; }
+function zoom() { return Math.min(innerWidth, innerHeight) < 560 ? 2 : 3; }
+const charById = id => CH.chars.find(c => c.id === id);
+const pairName = id => (ST.chars[id] && ST.chars[id].pair) || '(짝 추가 예정)';
+
+// ---------- 회차 ----------
+function newRun() {
+  const R = ST.rules, bonus = Object.keys(META.endings).length * 300;
+  RUN = { day: 1, slot: 0, hp: R.hpStart, yen: R.yenStart + bonus, gift: 0, rel: {}, log: [], map: DATA.home, at: null, over: false };
+  logPush({ k: 'day', t: '— 1일째 아침 —' });
+  if (bonus) logPush({ k: 'sys', t: `도감 보너스로 용돈 ${yenFmt(bonus)}을 더 받았어요.` });
+  logPush({ k: 'n', t: `${META.name}의 14일이 시작됐다. 머리 위에 !가 뜬 사람에게 말을 걸어 보자. 지도 버튼에서 조작법을 볼 수 있다.` });
+}
+function save() { if (!RUN || RUN.over) return; RUN.map = map || RUN.map; RUN.at = [Math.floor(me.x), Math.floor(me.y)]; store.set('tkw_run', RUN); store.set('tkw_meta', META); }
+function rel(id) { return RUN.rel[id] || (RUN.rel[id] = { mode: null, love: 0, match: 0, seen: [], talked: 0, day: 0 }); }
+function fill(s) { return s.replaceAll('{me}', META.name).replaceAll('{pair}', '').replaceAll('{day}', RUN.day).replaceAll('{slot}', ST.rules.slots[Math.min(RUN.slot, 3)]).replaceAll('{hp}', RUN.hp).replaceAll('{yen}', RUN.yen.toLocaleString('ko-KR')); }
+function apply(fx, mode, who) {
+  const out = [];
+  if (fx.hp) { RUN.hp = Math.max(0, Math.min(ST.rules.hpMax, RUN.hp + fx.hp)); out.push(`기력 ${fx.hp > 0 ? '+' : ''}${fx.hp}`); }
+  if (fx.yen) { RUN.yen += fx.yen; out.push(`${fx.yen > 0 ? '+' : ''}${yenFmt(fx.yen)}`); }
+  if (fx.gift) { RUN.gift += fx.gift; out.push(`선물 ${fx.gift > 0 ? '+' : ''}${fx.gift}`); }
+  if (who && mode && fx[mode]) { const r = rel(who); r[mode] = Math.max(0, Math.min(100, r[mode] + fx[mode])); out.push(`${mode === 'love' ? '호감' : '짝 진전'} ${fx[mode] > 0 ? '+' : ''}${fx[mode]} → ${r[mode]}`); }
+  if (out.length) logPush({ k: 'sys', t: out.join(' · ') });
+  hud();
+}
+async function spendSlot() {
+  RUN.slot++;
+  if (RUN.hp <= 0) return collapse();
+  if (RUN.slot >= ST.rules.slots.length) {
+    RUN.day++; RUN.slot = 0;
+    if (RUN.day > ST.rules.days) return finishRun(false);
+    RUN.hp = Math.min(ST.rules.hpMax, RUN.hp + ST.rules.nightHeal);
+    logPush({ k: 'n', t: '밤이 깊어 집으로 돌아가 잠들었다.' });
+    logPush({ k: 'day', t: `— ${RUN.day}일째 아침 —` });
+    logPush({ k: 'sys', t: `잠을 자서 기력 +${ST.rules.nightHeal}` });
+    await enter(DATA.home, null);
+  } else logPush({ k: 'n', t: `시간이 흘러 ${ST.rules.slots[RUN.slot]}이 되었다.` });
+  hud(); save();
+}
+function collapse() { logPush({ k: 'sys', t: '기력이 바닥나 길에서 쓰러졌다…' }); finishRun(true); }
+function routeOf(id, mode) { const S = ST.chars[id]; return S && S.routes && S.routes[mode]; }
+function endText(c, mode) { const RT = routeOf(c.id, mode); if (RT) return `「${RT.title}」 · ` + (mode === 'love' ? `${josa(c.name, '과', '와')} 연인이 되었다` : `${josa(c.name, '이', '가')} ${josa(pairName(c.id), '과', '와')} 맺어졌다`); return mode === 'love' ? `${josa(c.name, '과', '와')} 연인이 되었다` : `${josa(c.name, '이', '가')} ${josa(pairName(c.id), '과', '와')} 맺어졌다`; }
+function finishRun(fail) {
+  RUN.over = true; let got = 0;
+  for (const [id, r] of Object.entries(RUN.rel)) {
+    if (!r.mode || !ST.chars[id] || fail) continue;
+    if (ST.chars[id].story && ST.chars[id].story[r.mode]) { const e = pickEnding(id, r); if (e) { r.ending = e.id; const key = `${id}_${r.mode}_${e.id}`; if (!META.endings[key]) { got++; META.endings[key] = { run: META.runs + 1, title: e.title }; } } continue; }
+    if (r[r.mode] < ST.rules.endingAt) continue;
+    const key = id + '_' + r.mode; if (!META.endings[key]) { got++; META.endings[key] = { run: META.runs + 1 }; }
+  }
+  META.runs++; if (fail) META.fails++;
+  store.set('tkw_meta', META); store.set('tkw_run', null);
+  $('endTitle').textContent = fail ? `${RUN.day}일째, 쓰러졌어요` : '14일이 지났어요';
+  $('endLead').textContent = fail ? '기력이 0이 되어 이번 회차가 끝났어요. 쓰러진 회차에서는 엔딩을 얻지 못해요. 다음엔 벤치나 자판기로 기력을 챙겨요.'
+    : got ? `새 엔딩 ${got}개를 얻었어요. 다음 회차부터 용돈이 늘어나요.` : `이번 회차에서는 새 엔딩이 없어요. 호감이나 짝 진전이 ${ST.rules.endingAt}을 넘으면 엔딩이에요.`;
+  const box = $('endCards'); box.innerHTML = '';
+  for (const c of CH.chars) { const r = RUN.rel[c.id]; if (r && r.mode && ST.chars[c.id]) box.append(relCard(c, r, (ST.chars[c.id].story && ST.chars[c.id].story[r.mode]) ? !!r.ending : !fail && r[r.mode] >= ST.rules.endingAt)); }
+  if (!box.children.length) { const p = document.createElement('p'); p.className = 'lead'; p.textContent = '이번 회차에는 아무와도 관계를 정하지 않았어요.'; box.append(p); }
+  $('logp').hidden = true; $('choices').innerHTML = ''; $('endp').hidden = false;
+}
+function relCard(c, r, ok) {
+  const d = document.createElement('div'); d.className = 'card' + (ok ? ' got' : ''); const v = r[r.mode];
+  const S = ST.chars[c.id];
+  if (S && S.story && S.story[r.mode]) {
+    const RT = S.story[r.mode], e = r.ending && RT.endings.find(x => x.id === r.ending);
+    d.innerHTML = `<div class="nm"></div><div class="sub"></div><div class="bar${r.mode === 'match' ? ' match' : ''}"><i></i></div><div class="end"></div>`;
+    d.querySelector('.nm').textContent = c.name;
+    d.querySelector('.sub').textContent = `「${RT.title}」 ${r.mode === 'love' ? '내가 사귀기' : '짝 찾아주기 · 짝: ' + pairName(c.id)} · ${Math.min(r.step || 0, RT.chapters.length)}/${RT.chapters.length}장 · ${v}점`;
+    d.querySelector('.bar i').style.width = v + '%';
+    const en = d.querySelector('.end'); en.style.whiteSpace = 'pre-line';
+    en.textContent = e ? `결말 「${e.title}」\n` + e.lines.map(l => { const L = lineOf(l[0], l[1], c); return (L.who ? L.who + ': ' : '') + L.t; }).join('\n') : `이야기를 끝까지 보지 못했어요 (${r.step || 0}/${RT.chapters.length}장).`;
+    return d;
+  }
+  d.innerHTML = `<div class="nm"></div><div class="sub"></div><div class="bar${r.mode === 'match' ? ' match' : ''}"><i></i></div>${ok ? '<div class="end"></div>' : ''}`;
+  d.querySelector('.nm').textContent = c.name;
+  d.querySelector('.sub').textContent = (r.mode === 'love' ? '내가 사귀기' : `짝 찾아주기 · 짝: ${pairName(c.id)}`) + ` · ${v}/100`;
+  d.querySelector('.bar i').style.width = v + '%';
+  if (ok) { const RT = routeOf(c.id, r.mode); d.querySelector('.end').textContent = '엔딩: ' + endText(c, r.mode) + (RT && RT.ending ? '\n' + RT.ending.map(l => (l[0] === 'c' ? c.name + ': ' : '') + fill(l[1])).join('\n') : ''); d.querySelector('.end').style.whiteSpace = 'pre-line'; }
+  return d;
+}
+
+// ---------- 로그 ----------
+function logPush(e) { RUN.log.push(e); if (RUN.log.length > 400) RUN.log.shift(); renderLine(e); }
+function renderLine(e) {
+  const feed = $('feed'), d = document.createElement('div');
+  d.className = 'ln ' + (e.k === 'c' ? '' : e.k);
+  if (e.k === 'c' || e.k === 'me') { const w = document.createElement('span'); w.className = 'who'; w.textContent = e.who; d.append(w); }
+  d.append(e.t); feed.append(d); feed.scrollTop = feed.scrollHeight;
+}
+function renderLog() { $('feed').innerHTML = ''; RUN.log.forEach(renderLine); }
+function openLog(talking, title) { $('logp').hidden = false; $('logp').classList.toggle('talking', !!talking); $('logTitle').textContent = title || '로그'; $('feed').scrollTop = $('feed').scrollHeight; }
+function choose(opts) {
+  return new Promise(done => {
+    const box = $('choices'); box.innerHTML = '';
+    opts.forEach((o, i) => {
+      const b = document.createElement('button'); b.className = 'btn'; b.type = 'button'; b.append(`${i + 1}. ${o.t}`);
+      if (o.note) { const s = document.createElement('small'); s.textContent = o.note; b.append(s); }
+      b.disabled = !!o.disabled; b.onclick = () => { box.innerHTML = ''; done(o); };
+      box.append(b);
+    });
+    $('feed').scrollTop = $('feed').scrollHeight;
+  });
+}
+let sayCount = 0;
+function lineOf(k, t, c) {
+  if (k === 'c') return { k: 'c', who: c ? c.name : '', t: fill(t) };
+  if (k === 'me') return { k: 'me', who: META.name, t: fill(t) };
+  if (k === 'n') return { k: 'n', t: fill(t) };
+  if (k === 'p') return { k: 'c', who: c ? pairName(c.id) : '', t: fill(t) };
+  return { k: 'c', who: k, t: fill(t) };
+}
+async function say(lines, c) {
+  for (const [k, t] of lines) {
+    logPush(lineOf(k, t, c)); sayCount++;
+    if (sayCount % 12 === 0) await choose([{ t: '계속 ▶' }]); else await sleep(70);
+  }
+}
+// ---------- 긴 이야기(v2): 비트 실행 ----------
+function cond(x, r) {
+  if (x.startsWith('!flag:')) return !(r.flags || []).includes(x.slice(6));
+  if (x.startsWith('flag:')) return (r.flags || []).includes(x.slice(5));
+  let m = x.match(/^score>=(\d+)$/); if (m) return r[r.mode] >= +m[1];
+  m = x.match(/^day>=(\d+)$/); if (m) return RUN.day >= +m[1];
+  return false;
+}
+function optNote(fx) { const n = []; if (fx.yen) n.push((fx.yen > 0 ? '+' : '') + yenFmt(fx.yen)); if (fx.hp) n.push(`기력 ${fx.hp > 0 ? '+' : ''}${fx.hp}`); if (fx.gift) n.push(`선물 ${fx.gift > 0 ? '+' : ''}${fx.gift}`); return n.join(' · '); }
+async function runBeats(beats, c, r) {
+  for (const b of beats || []) {
+    if (Array.isArray(b)) { await say([b], c); continue; }
+    if (b.choice) {
+      const opts = b.choice.map(o => Object.assign({}, o, { note: optNote(o.fx || {}), disabled: (o.fx && o.fx.yen < 0 && RUN.yen + o.fx.yen < 0) }));
+      if (RUN.gift > 0 && !b.noGift) opts.push({ t: '준비한 선물을 건넨다', note: '선물 -1', fx: { gift: -1, love: 8, match: 8 }, then: [['c', '…나한테? 고마워.']] });
+      sayCount = 0; const o = await choose(opts);
+      logPush({ k: 'me', who: META.name, t: o.t });
+      apply(o.fx || {}, r.mode, c.id);
+      (o.set || []).forEach(f => { r.flags = r.flags || []; if (!r.flags.includes(f)) r.flags.push(f); });
+      await runBeats(o.then, c, r);
+      continue;
+    }
+    if (b.if) { await runBeats(cond(b.if, r) ? b.then : b.else, c, r); continue; }
+  }
+}
+function pickEnding(id, r) {
+  const RT = ST.chars[id].story[r.mode];
+  if ((r.step || 0) < RT.chapters.length) return null;
+  return RT.endings.find(e => (e.cond || []).every(x => cond(x, r))) || null;
+}
+
+// ---------- 대화·행동 ----------
+async function talk(c) {
+  if (busy) return; busy = true; openLog(true, c.name); target = null;
+  try {
+    if (c.id === 'robot') { const tips = ST.robot[0], r = rel('robot'); logPush({ k: 'c', who: c.name, t: fill(tips[r.talked++ % tips.length]) }); return; }
+    const S = ST.chars[c.id]; if (!S) return;
+    if (S.simple) { const r = rel(c.id); await say(S.lines[r.talked++ % S.lines.length], c); const host = S.pairOf && CH.chars.find(x => x.id === S.pairOf); if (host) logPush({ k: 'sys', t: `${host.name}의 짝이에요. ${host.name}에게 '짝 찾아주기'를 고르면 둘의 이야기가 이어져요.` }); return; }
+    const r = rel(c.id);
+    if (r.day === RUN.day) { logPush({ k: 'n', t: `${josa(c.name, '과', '와')}는 오늘 이미 이야기했다. 내일 또 오자.` }); return; }
+    const V2 = r.mode && S.story && S.story[r.mode], V2C = V2 && V2.chapters[r.step || 0];
+    if (V2C && V2C.when === 'night' && RUN.slot !== 3) { logPush({ k: 'n', t: `(${c.name}의 다음 이야기는 밤에 이어질 것 같다.)` }); return; }
+    const RT = r.mode && S.routes && S.routes[r.mode], CHP = RT && RT.chapters[r.step || 0];
+    if (CHP && CHP.when === 'night' && RUN.slot !== 3) { await say(CHP.notyet, c); return; }   // 밤에만 일어나는 장: 시간이 맞을 때까지 기력·행동을 쓰지 않아요
+    r.day = RUN.day;
+    RUN.hp = Math.max(0, RUN.hp - ST.rules.talkCost); logPush({ k: 'sys', t: `말 걸기 · 기력 -${ST.rules.talkCost}` }); hud();
+    if (!r.mode) {
+      await say(S.intro.lines, c);
+      logPush({ k: 'n', t: S.intro.mode });
+      const pick = await choose([{ t: '내가 사귈래', note: '호감을 쌓아요', mode: 'love' }, { t: '어울리는 짝을 찾아줄래', note: `짝: ${pairName(c.id)}`, mode: 'match' }]);
+      r.mode = pick.mode;
+      logPush({ k: 'me', who: META.name, t: pick.t });
+      logPush({ k: 'n', t: r.mode === 'love' ? `${josa(META.name, '은', '는')} ${josa(c.name, '과', '와')} 가까워지기로 했다.` : `${josa(META.name, '은', '는')} ${c.name}의 짝을 찾아 주기로 했다.` });
+      apply({ [r.mode]: 10 }, r.mode, c.id);
+    } else if (V2) {
+      r.step = r.step || 0; sayCount = 0;
+      if (!V2C) { const af = (S.after && S.after[r.mode]) || []; await say(af.length ? af[Math.floor(Math.random() * af.length)] : [['n', '잠깐 이야기를 나눴다.']], c); apply({ [r.mode]: 2 }, r.mode, c.id); }
+      else if (V2C.need && !cond(V2C.need, r)) { await say(V2C.wait || [], c); apply({ [r.mode]: 3 }, r.mode, c.id); }
+      else {
+        logPush({ k: 'day', t: `「${V2.title}」 ${r.step + 1}장 · ${V2C.title || ''}` });
+        await runBeats(V2C.beats, c, r); r.step++;
+        if (r.step >= V2.chapters.length) logPush({ k: 'sys', t: `「${V2.title}」 마지막 장까지 봤어요. 14일째 밤이 지나면 결말이 정해져요.` });
+        else logPush({ k: 'sys', t: `다음 이야기 ${r.step + 1}/${V2.chapters.length}장은 내일부터 볼 수 있어요.` });
+      }
+    } else if (RT) {
+      r.step = r.step || 0;
+      if (!CHP) { await say(RT.after[Math.floor(Math.random() * RT.after.length)], c); apply({ [r.mode]: 3 }, r.mode, c.id); }
+      else if (CHP.need && r[r.mode] < CHP.need) { await say(CHP.wait, c); apply({ [r.mode]: 4 }, r.mode, c.id); }
+      else {
+        logPush({ k: 'day', t: `「${RT.title}」 ${r.step + 1}장` });
+        await say(CHP.lines, c);
+        const o = await choose(CHP.choices.map(o => {
+          const fx = o.fx || {}, notes = [];
+          if (fx.yen) notes.push((fx.yen > 0 ? '+' : '') + yenFmt(fx.yen)); if (fx.hp) notes.push(`기력 ${fx.hp > 0 ? '+' : ''}${fx.hp}`);
+          return Object.assign({}, o, { note: notes.join(' · '), disabled: fx.yen < 0 && RUN.yen + fx.yen < 0 });
+        }));
+        logPush({ k: 'me', who: META.name, t: o.t });
+        await say(o.reply || [], c);
+        apply(o.fx || {}, r.mode, c.id); r.step++;
+        if (r.step >= RT.chapters.length) logPush({ k: 'sys', t: `「${RT.title}」 이야기를 끝까지 봤어요. 14일째까지 ${r.mode === 'love' ? '호감' : '짝 진전'} ${ST.rules.endingAt} 이상이면 엔딩이에요.` });
+      }
+    } else {
+      const pool = S.scenes.map((s, i) => i).filter(i => !r.seen.includes(i));
+      if (!pool.length) { await say(ST.smalltalk[Math.floor(Math.random() * ST.smalltalk.length)], c); apply({ [r.mode]: 4 }, r.mode, c.id); }
+      else {
+        const i = pool[Math.floor(Math.random() * pool.length)], sc = S.scenes[i]; r.seen.push(i);
+        await say(sc.lines, c);
+        const opts = sc.choices.map(o => {
+          const fx = o.fx || {}, notes = [];
+          if (fx.yen) notes.push((fx.yen > 0 ? '+' : '') + yenFmt(fx.yen)); if (fx.hp) notes.push(`기력 ${fx.hp > 0 ? '+' : ''}${fx.hp}`);
+          return Object.assign({}, o, { note: notes.join(' · '), disabled: fx.yen < 0 && RUN.yen + fx.yen < 0 });
+        });
+        if (RUN.gift > 0) opts.push({ t: '준비한 선물을 건넨다', note: '선물 -1', fx: { gift: -1, love: 15, match: 15 }, reply: [['c', '…나한테? 고마워. 소중히 할게.']] });
+        const o = await choose(opts);
+        logPush({ k: 'me', who: META.name, t: o.t });
+        await say(o.reply || [], c);
+        apply(o.fx || {}, r.mode, c.id);
+      }
+    }
+    await spendSlot();
+  } finally { busy = false; hud(); save(); }
+}
+function actKind(label) {
+  const L = label || '';
+  if (L.includes('시골 자판기')) return '시골 자판기';
+  if (L.includes('자판기')) return '자판기';
+  if (L.includes('벤치') || L.includes('테라스') || L.includes('노천')) return '벤치';
+  if (L.includes('크레페')) return '크레페';
+  if (L.includes('편의점')) return '편의점';
+  if (L.includes('신사') || L.includes('새전함')) return '신사';
+  if (['기념품', '부티크', '빵집', '화과자', '할인점', '굿즈', '꽃집', '백화점', '명품', '과자', '보석', '모자', '문구', '양말', '액세서리'].some(k => L.includes(k))) return '선물';
+  return null;
+}
+async function doAct(label, flavor) {
+  const k = actKind(label);
+  if (!k) { toast(flavor || `${label} 안쪽은 아직 그리지 않았어요.`); return; }
+  const A = ST.acts[k];
+  if (A.fx.yen < 0 && RUN.yen + A.fx.yen < 0) { toast('돈이 모자라요.'); return; }
+  busy = true; openLog(false);
+  logPush({ k: 'n', t: `[${label}] ${A.log}` });
+  apply(A.fx);
+  if (A.luck) { const r = Math.random(); if (r < .45) { logPush({ k: 'n', t: '마음이 맑아졌다.' }); apply({ hp: 2 }); } else if (r < .7) { logPush({ k: 'n', t: '돌계단에서 동전이 반짝였다.' }); apply({ yen: 500 }); } else logPush({ k: 'n', t: '조용한 바람만 불었다.' }); }
+  busy = false;
+  if (A.slot) await spendSlot(); else if (RUN.hp <= 0) collapse();
+  save();
+}
+async function randomEvent() {
+  if (Math.random() > ST.rules.eventChance) return;
+  const E = ST.events[Math.floor(Math.random() * ST.events.length)];
+  openLog(true, '사건'); logPush({ k: 'n', t: E.t });
+  const o = await choose(E.choices.map(c => Object.assign({}, c, { disabled: (c.fx.yen || 0) < 0 && RUN.yen + c.fx.yen < 0 && !c.risk })));
+  logPush({ k: 'me', who: META.name, t: o.t });
+  if (o.risk && Math.random() > o.risk) logPush({ k: 'n', t: o.safe }); else { logPush({ k: 'n', t: o.log }); apply(o.fx); }
+  if (RUN.hp <= 0) collapse();
+}
+
+// ---------- 맵 ----------
+async function enter(name, spawn, quiet) {
+  fading = true; $('fade').classList.add('on'); await sleep(quiet ? 0 : 260);
+  const m = DATA.maps[name];
+  if (!IMG[name]) IMG[name] = { bg: await load(`maps/${name}_bg.png`), obj: await load(`maps/${name}_obj.png`) };
+  if (!m.block) {
+    const block = new Set(m.water.map(t => t.join(',')));
+    m.objs.forEach(o => { if (o.solid && o.b[2] > o.b[0]) for (let x = o.b[0]; x < o.b[2]; x++) for (let y = o.b[1]; y < o.b[3]; y++) block.add(x + ',' + y); });
+    m.block = block;
+  }
+  m.npcs = CH.chars.filter(c => c.map === name && c.id !== 'me' && c.id !== PL.id).map(c => Object.assign(c, { dir: 'down' }));
+  M = m; map = name;
+  const s = spawn || M.start; me.x = s[0] + .5; me.y = s[1] + .5; target = null;
+  $('mapName').textContent = M.label;
+  $('fade').classList.remove('on'); fading = false;
+  const bn = $('banner'); bn.textContent = M.label; bn.style.opacity = 1; clearTimeout(bn.t); bn.t = setTimeout(() => bn.style.opacity = 0, 1200);
+  save();
+}
+async function travel(to, spawn, train) {
+  if (train) {
+    if (RUN.yen < ST.rules.trainYen) { toast(`열차표가 ${yenFmt(ST.rules.trainYen)}이에요. 돈이 모자라요.`); return; }
+    RUN.yen -= ST.rules.trainYen; logPush({ k: 'sys', t: `열차표 -${yenFmt(ST.rules.trainYen)}` }); hud();
+  }
+  await enter(to, spawn);
+  logPush({ k: 'n', t: `${M.label}에 도착했다.` });
+  await randomEvent(); save();
+}
+function free(x, y) { if (x < 0 || y < 0 || x >= M.NX || y >= M.NY) return false; const fx = Math.floor(x), fy = Math.floor(y); return !M.block.has(fx + ',' + fy) && !M.npcs.some(c => c.tile[0] === fx && c.tile[1] === fy); }
+function tryMove(dx, dy) {
+  if (free(me.x + dx, me.y + dy)) { me.x += dx; me.y += dy; return true; }
+  if (dx && free(me.x + dx, me.y)) { me.x += dx; return true; }
+  if (dy && free(me.x, me.y + dy)) { me.y += dy; return true; }
+  return false;
+}
+function checkExit() {
+  const tx = Math.floor(me.x), ty = Math.floor(me.y);
+  for (const o of M.objs) {
+    const d = o.door; if (!d || !d.walk || d.train) continue;
+    const hit = d.span ? (tx === d.tile[0] && ty >= d.span[0] && ty <= d.span[1]) : d.spanX ? (ty === d.tile[1] && tx >= d.spanX[0] && tx <= d.spanX[1]) : (tx === d.tile[0] && ty === d.tile[1]);
+    if (hit) { busy = true; travel(d.to, d.spawn).finally(() => busy = false); return true; }
+  }
+  return false;
+}
+function findNear() {
+  let best = null, bd = 1.7;
+  for (const c of M.npcs) { const dd = Math.hypot(c.tile[0] + .5 - me.x, c.tile[1] + .5 - me.y); if (dd < bd) { bd = dd; best = { kind: 'npc', c, label: `${c.name}에게 말 걸기` }; } }
+  for (const o of M.objs) {
+    if (o.door && !(o.door.walk && !o.door.train)) {
+      const dd = Math.hypot(o.door.tile[0] + .5 - me.x, o.door.tile[1] + .5 - me.y);
+      if (dd < Math.min(bd, 1.6)) { bd = dd; const k = actKind(o.door.label); best = { kind: 'door', o, label: o.door.train ? `열차 타기 · ${o.door.label}` : k ? `${o.door.label} · ${k === '편의점' ? '아르바이트' : k === '선물' ? '선물 사기' : '들르기'}` : `들어가기 · ${o.door.label}` }; }
+    }
+    if (o.act && o.b[2] > o.b[0]) {
+      const cx = Math.max(o.b[0], Math.min(me.x, o.b[2])), cy = Math.max(o.b[1], Math.min(me.y, o.b[3]));
+      const dd = Math.hypot(cx - me.x, cy - me.y) + .3;
+      if (dd < Math.min(bd, 1.3)) { bd = dd; best = { kind: 'act', o, label: `${o.act[1]} · ${o.act[0]}` }; }
+    }
+  }
+  return best;
+}
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(t.t); t.t = setTimeout(() => t.hidden = true, 2200); }
+function doAction() {
+  if (busy || !near || !RUN || RUN.over) return;
+  if (near.kind === 'npc') talk(near.c);
+  else if (near.kind === 'door') {
+    const d = near.o.door;
+    if (d.train || DATA.maps[d.to]) { busy = true; travel(d.to, d.spawn, true).finally(() => busy = false); }
+    else doAct(d.label);
+  } else doAct(near.o.act[0], `${near.o.act[0]} — ${near.o.act[1]}.`);
+}
+function hud() {
+  if (!RUN) return;
+  $('dayTxt').textContent = `${RUN.day}일째 · ${ST.rules.slots[Math.min(RUN.slot, 3)]}`;
+  $('yenTxt').textContent = yenFmt(RUN.yen);
+  const p = $('hpPips'); p.innerHTML = ''; p.classList.toggle('low', RUN.hp <= 3);
+  for (let i = 0; i < ST.rules.hpMax; i++) { const e = document.createElement('i'); if (i < RUN.hp) e.className = 'on'; p.append(e); }
+  p.setAttribute('aria-label', `기력 ${RUN.hp}/${ST.rules.hpMax}`);
+  $('giftRow').hidden = !RUN.gift; $('giftTxt').textContent = RUN.gift;
+}
+
+// ---------- 그리기 ----------
+function drawChar(ctx, c, dir, fi, X, Y) { const di = CH.dirs.indexOf(dir), n = c.n[dir] || 1; ctx.drawImage(CHIMG, (fi % n) * CH.FW, (c.base + di) * CH.FH, CH.FW, CH.FH, X, Y, CH.FW, CH.FH); }
+function dirOf(dx, dy) { const sx = (dx - dy) * 2, sy = dx + dy; return Math.abs(sx) > Math.abs(sy) ? (sx > 0 ? 'right' : 'left') : (sy > 0 ? 'down' : 'up'); }
+function camera() {
+  const Z = zoom(), logOpen = !$('logp').hidden, wide = innerWidth > 700, [px, py] = P(M, me.x, me.y);
+  return [Z, Math.round(px - (innerWidth - (logOpen && wide ? 400 : 0)) / Z / 2), Math.round(py - 14 - (innerHeight - (logOpen && !wide ? Math.min(innerHeight * .44, 360) : 0)) / Z / 2), px, py];
+}
+function frame(now) {
+  const dt = Math.min(.05, (now - last) / 1000); last = now; requestAnimationFrame(frame);
+  if (!M) return;
+  const dpr = devicePixelRatio || 1;
+  if (cv.width !== Math.round(innerWidth * dpr) || cv.height !== Math.round(innerHeight * dpr)) { cv.width = Math.round(innerWidth * dpr); cv.height = Math.round(innerHeight * dpr); }
+  const blocked = busy || fading || !RUN || RUN.over || !$('title').hidden || !$('atlas').hidden || $('choices').children.length > 0;
+  let dx = 0, dy = 0;
+  if (!blocked) {
+    const u = keys.ArrowUp || keys.KeyW, dn = keys.ArrowDown || keys.KeyS, l = keys.ArrowLeft || keys.KeyA, r = keys.ArrowRight || keys.KeyD;
+    if (u) { dx -= 1; dy -= 1; } if (dn) { dx += 1; dy += 1; } if (l) { dx -= 1; dy += 1; } if (r) { dx += 1; dy -= 1; }
+    if (dx || dy) target = null;
+    else if (target) { dx = target[0] - me.x; dy = target[1] - me.y; if (Math.hypot(dx, dy) < .15) { target = null; dx = dy = 0; } }
+  }
+  const len = Math.hypot(dx, dy), moving = len > 0;
+  if (moving) {
+    const sp = 4.2 * dt, mx = dx / len * sp, my = dy / len * sp;
+    if (!tryMove(mx, my)) target = null;
+    me.dir = dirOf(mx, my); walkT += dt;
+    if (checkExit()) return;
+  }
+  near = blocked ? null : findNear();
+  const a = $('act');
+  if (near) { a.hidden = false; a.textContent = near.label; const k = document.createElement('kbd'); k.textContent = 'Space'; a.append(k); } else a.hidden = true;
+  let an = '', ad = 4;
+  for (const ar of M.areas) { const d2 = Math.hypot(ar.t[0] - me.x, ar.t[1] - me.y); if (d2 < ad) { ad = d2; an = ar.n; } }
+  $('areaName').textContent = an || REGION[map];
+  const [Z, cx, cy, px, py] = camera();
+  g.setTransform(dpr * Z, 0, 0, dpr * Z, 0, 0); g.imageSmoothingEnabled = false;
+  g.fillStyle = '#15131f'; g.fillRect(0, 0, innerWidth / Z, innerHeight / Z);
+  g.drawImage(IMG[map].bg, -cx, -cy);
+  const list = [];
+  for (const o of M.objs) if (o.n !== 'exit') list.push({ k: o.p[1] + o.s[3], o });
+  for (const c of M.npcs) {
+    const [sx, sy] = P(M, c.tile[0] + .5, c.tile[1] + .5);
+    c.dir = Math.hypot(c.tile[0] + .5 - me.x, c.tile[1] + .5 - me.y) < 2.5 ? dirOf(me.x - c.tile[0] - .5, me.y - c.tile[1] - .5) : 'down';
+    list.push({ k: sy, a: c, sx, sy });
+  }
+  list.push({ k: py, me: true, sx: px, sy: py });
+  list.sort((p, q) => p.k - q.k);
+  const t = now / 1000;
+  g.font = '11px Galmuri11, sans-serif'; g.textAlign = 'center';
+  for (const it of list) {
+    if (it.o) { const s = it.o.s; g.drawImage(IMG[map].obj, s[0], s[1], s[2], s[3], it.o.p[0] - cx, it.o.p[1] - cy, s[2], s[3]); continue; }
+    const c = it.me ? PL : it.a, dir = it.me ? me.dir : c.dir, n = c.n[dir] || 1;
+    const fi = it.me ? (moving && n > 1 ? 1 + Math.floor(walkT * 8) % (n - 1) : 0) : 0;
+    const X = Math.round(it.sx - cx - CH.FW / 2), Y = Math.round(it.sy - cy - CH.FH + 2);
+    g.fillStyle = '#0006'; g.beginPath(); g.ellipse(it.sx - cx, it.sy - cy, 7, 3, 0, 0, 7); g.fill();
+    drawChar(g, c, dir, fi, X, Y);
+    if (!it.me && RUN && c.id !== 'robot' && !(ST.chars[c.id] && ST.chars[c.id].simple)) {
+      const r = RUN.rel[c.id], mark = !r || !r.mode ? '!' : r.day !== RUN.day ? (r.mode === 'love' ? '♥' : '♣') : '';
+      if (mark) { g.fillStyle = mark === '!' ? '#ffc86a' : r.mode === 'love' ? '#ff8aa8' : '#6ad0c8'; g.fillText(mark, it.sx - cx, Y + 2 + Math.round(Math.sin(t * 4))); }
+    }
+  }
+  for (const o of M.objs) {
+    const d = o.door; if (!d || !d.walk || d.train) continue;
+    const [sx, sy] = P(M, d.tile[0] + .5, d.tile[1] + .5); if (Math.hypot(d.tile[0] - me.x, d.tile[1] - me.y) > 9) continue;
+    const txt = '▸ ' + d.label, w = g.measureText(txt).width + 10, X = Math.round(sx - cx), Y = Math.round(sy - cy - 30);
+    g.fillStyle = '#221e30'; g.fillRect(X - w / 2, Y - 10, w, 15); g.strokeStyle = '#ffc86a'; g.lineWidth = 1; g.strokeRect(X - w / 2 + .5, Y - 9.5, w - 1, 14);
+    g.fillStyle = '#ffc86a'; g.fillText(txt, X, Y + 1);
+  }
+}
+
+// ---------- 입력 ----------
+addEventListener('keydown', e => {
+  if (!$('title').hidden || !$('endp').hidden || e.target.tagName === 'INPUT') return;
+  if (!$('atlas').hidden) { if (e.key === 'Escape') $('atlas').hidden = true; return; }
+  const ch = $('choices');
+  if (ch.children.length) {
+    if (/^Digit[1-9]$/.test(e.code)) { const b = ch.children[+e.code.slice(5) - 1]; if (b && !b.disabled) b.click(); }
+    else if (['Space', 'Enter'].includes(e.code) && ch.children.length === 1) { e.preventDefault(); ch.children[0].click(); }
+    return;
+  }
+  if (['Space', 'Enter'].includes(e.code)) { e.preventDefault(); doAction(); return; }
+  if (e.key === 'l' || e.key === 'L') { $('logp').hidden = !$('logp').hidden; return; }
+  if (e.code.startsWith('Arrow')) e.preventDefault(); keys[e.code] = true;
+});
+addEventListener('keyup', e => { keys[e.code] = false; });
+addEventListener('blur', () => { keys = {}; });
+cv.addEventListener('pointerdown', e => {
+  if (!M || busy) return; const [Z, cx, cy] = camera();
+  target = toTile(M, e.clientX / Z + cx, e.clientY / Z + cy);
+});
+$('act').addEventListener('click', doAction);
+$('logBtn').addEventListener('click', () => { if ($('logp').hidden) openLog(false); else if (!$('choices').children.length) $('logp').hidden = true; });
+$('logClose').addEventListener('click', () => { if (!$('choices').children.length) $('logp').hidden = true; });
+// ---------- 지도 ----------
+$('atlasBtn').addEventListener('click', () => {
+  const body = $('atlasBody'); body.innerHTML = '';
+  const groups = {}; Object.keys(DATA.maps).forEach(n => (groups[REGION[n]] = groups[REGION[n]] || []).push(n));
+  for (const [rg, names] of Object.entries(groups)) {
+    const h = document.createElement('div'); h.className = 'label'; h.textContent = rg; body.append(h);
+    const wrap = document.createElement('div'); wrap.className = 'cards'; body.append(wrap);
+    for (const n of names) {
+      const m = DATA.maps[n], card = document.createElement('div'); card.className = 'card' + (n === map ? ' here' : '');
+      const links = m.objs.filter(o => o.door && (o.door.walk || o.door.train) && DATA.maps[o.door.to]).map(o => (o.door.train ? '열차 → ' : '길 → ') + DATA.maps[o.door.to].label);
+      const who = CH.chars.filter(c => c.map === n && c.id !== PL.id && c.id !== 'me').map(c => { const r = RUN && RUN.rel[c.id]; return c.name + (r && r.mode ? (r.mode === 'love' ? ` (호감 ${r.love})` : ` (짝 진전 ${r.match})`) : ''); });
+      card.innerHTML = `<div class="nm"></div><div class="sub"></div>${who.length ? '<div class="who"></div>' : ''}`;
+      card.querySelector('.nm').textContent = m.label + (n === map ? ' · 지금 여기' : '');
+      card.querySelector('.sub').textContent = links.join(' · ');
+      if (who.length) card.querySelector('.who').textContent = who.join(', ');
+      wrap.append(card);
+    }
+  }
+  $('atlas').hidden = false; $('atlasClose').focus();
+});
+$('atlasClose').addEventListener('click', () => $('atlas').hidden = true);
+// ---------- 타이틀 ----------
+function showTitle() {
+  $('nameIn').value = META.name || '';
+  const pk = $('picks'); pk.innerHTML = '';
+  for (const c of CH.chars) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'pick' + (c.id === PL.id ? ' on' : '');
+    const cvs = document.createElement('canvas'); cvs.width = CH.FW; cvs.height = CH.FH; const x = cvs.getContext('2d'); x.imageSmoothingEnabled = false; drawChar(x, c, 'down', 0, 0, 0);
+    b.append(cvs, c.id === 'me' ? '기본' : c.name); b.setAttribute('aria-pressed', c.id === PL.id);
+    b.onclick = () => { PL = c; META.look = c.id; store.set('tkw_meta', META); showTitle(); };
+    pk.append(b);
+  }
+  const saved = store.get('tkw_run'); $('contRun').hidden = !(saved && !saved.over);
+  const dex = $('dex'); dex.innerHTML = ''; let n = 0;
+  for (const c of CH.chars) {
+    if (!ST.chars[c.id] || ST.chars[c.id].simple) continue;
+    for (const mode of ['love', 'match']) {
+      const RT = ST.chars[c.id].story && ST.chars[c.id].story[mode];
+      if (!RT) {
+        const got = META.endings[c.id + '_' + mode]; if (got) n++;
+        const d = document.createElement('div'); d.className = 'card' + (got ? ' got' : '');
+        d.innerHTML = '<div class="nm"></div><div class="sub"></div>';
+        d.querySelector('.nm').textContent = got ? endText(c, mode) : (routeOf(c.id, mode) ? '「???」' : '???');
+        d.querySelector('.sub').textContent = `${c.name} · ${mode === 'love' ? '내가 사귀기' : '짝 찾아주기'}${got ? ` · ${got.run}회차` : ''}`;
+        dex.append(d); continue;
+      }
+      for (const e of RT.endings) {
+        const got = META.endings[`${c.id}_${mode}_${e.id}`]; if (got) n++;
+        const d = document.createElement('div'); d.className = 'card' + (got ? ' got' : '');
+        d.innerHTML = '<div class="nm"></div><div class="sub"></div>';
+        d.querySelector('.nm').textContent = got ? `「${e.title}」` : '「???」';
+        d.querySelector('.sub').textContent = `${c.name} · ${mode === 'love' ? '내가 사귀기' : '짝 찾아주기'} · 「${RT.title}」${got ? ` · ${got.run}회차` : ''}`;
+        dex.append(d);
+      }
+    }
+    continue;
+    for (const mode of ['love', 'match']) {
+      const got = META.endings[c.id + '_' + mode]; if (got) n++;
+      const d = document.createElement('div'); d.className = 'card' + (got ? ' got' : '');
+      d.innerHTML = '<div class="nm"></div><div class="sub"></div>';
+      d.querySelector('.nm').textContent = got ? endText(c, mode) : (routeOf(c.id, mode) ? '「???」' : '???');
+      d.querySelector('.sub').textContent = `${c.name} · ${mode === 'love' ? '내가 사귀기' : '짝 찾아주기'}${got ? ` · ${got.run}회차` : ''}`;
+      dex.append(d);
+    }
+  }
+  $('dexLabel').textContent = `엔딩 도감 ${n}/${dex.children.length} · 지금까지 ${META.runs}회차` + (META.fails ? ` (쓰러짐 ${META.fails}번)` : '');
+  $('title').hidden = false;
+}
+async function startGame(fresh) {
+  const nm = $('nameIn').value.trim(); if (!nm) { $('nameIn').focus(); toast('이름을 적어 주세요.'); return; }
+  META.name = nm; store.set('tkw_meta', META);
+  $('title').hidden = true; $('endp').hidden = true; $('feed').innerHTML = '';
+  if (fresh) { newRun(); await enter(DATA.home, null, true); }
+  else { RUN = store.get('tkw_run'); renderLog(); await enter(RUN.map, RUN.at, true); }
+  hud(); openLog(false);
+}
+$('newRun').addEventListener('click', () => startGame(true));
+$('contRun').addEventListener('click', () => startGame(false));
+$('toTitle').addEventListener('click', () => { $('endp').hidden = true; RUN = null; showTitle(); });
+$('nameIn').addEventListener('keydown', e => { if (e.key === 'Enter') startGame(true); });
+(async () => {
+  await document.fonts.load('13px Galmuri11').catch(() => {});
+  if (window.claude && claude.use) await cloudInit(); else setCloud('local');
+  DATA = await (await fetch('data.json')).json(); CHIMG = await load('chars.png'); CH = DATA.chars; ST = DATA.story;
+  META = Object.assign({ name: '', look: 'me', endings: {}, runs: 0, fails: 0 }, store.get('tkw_meta') || {});
+  PL = charById(META.look) || charById('me');
+  await enter(DATA.home, null, true);
+  showTitle();
+  requestAnimationFrame(frame);
+})();
+</script>
