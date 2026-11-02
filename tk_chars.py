@@ -242,6 +242,7 @@ def trim_side_hair(img, ref):
         xs = np.where(skin[max(y0, y - 2):min(y1, y + 2) + 1].any(0))[0]
         if len(xs): L[y], Rr[y] = xs.min(), xs.max()
     ys = sorted(L)
+    hair = np.array([30, 28, 40, 255], np.uint8)
     OL = np.array([26, 16, 36, 255], np.uint8); skc = np.array(list(ref.astype(np.uint8)) + [255], np.uint8)
     for y in ys:
         win = [k for k in ys if abs(k - y) <= 5]
@@ -252,6 +253,21 @@ def trim_side_hair(img, ref):
             if a[y, x, 3] == 0: a[y, x] = hair
         for x in (l - 1, r + 1):
             if 0 <= x < w: a[y, x] = OL
+    # 모자챙 아래 ~ 얼굴 옆에 생긴 빈 틈: 챙 끝에서 얼굴선까지 부드럽게 머리카락으로 메워요
+    above = [yy for yy in range(max(0, ys[0] - 4), ys[0]) if (a[yy, :, 3] > 0).any()]
+    if above:
+        yb = above[-1]; xs_b = np.where(a[yb, :, 3] > 0)[0]; bl, br = xs_b.min(), xs_b.max()
+        n = max(4, int((ys[-1] - ys[0]) * .45))
+        for i, y in enumerate(ys[:n]):
+            t = i / n; win = [k for k in ys if abs(k - y) <= 5]
+            l = min(L[k] for k in win); r = max(Rr[k] for k in win)
+            el = int(round(bl + (l - bl) * t)); er = int(round(br + (r - br) * t))
+            for x in range(max(0, el), l - 1):
+                if a[y, x, 3] == 0 or True: a[y, x] = hair
+            for x in range(r + 2, min(w, er + 1)):
+                a[y, x] = hair
+            if el < l - 1 and el >= 0: a[y, el] = OL
+            if er > r + 1 and er < w: a[y, er] = OL
     return a
 def shrink(img, scale):
     img = img.copy(); m = img[..., 3] > 0
