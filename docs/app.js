@@ -30,7 +30,7 @@ const JOBS = [['30 분', 30, 40], ['3 시간', 180, 150], ['8 시간', 480, 350]
 const DROP_MS = 5 * 60 * 1000;
 const GACHA = 300, DUP = 150, TALK_MAX = 3, LOVE_DAY = 4;   // 애정은 하루 최대 4 → 한 단계(25)에 약 일주일
 function addLove(o, n) { if (!o.lv || o.lv.day !== today()) o.lv = { day: today(), g: 0 }; const g = Math.max(0, Math.min(n, LOVE_DAY - o.lv.g)); const before = stageOf(o.love); o.lv.g += g; o.love = clamp(o.love + g); if (stageOf(o.love) !== before) { S.coins += 100; setTimeout(() => toast(`${stageOf(o.love)[0]}이(가) 됐어요! +100 코인`), 50); } return g; }
-let CH = [], CHM = {}, TALK = {}, FR = {}, IT = [], ITM = {}, MUM = {};
+let CH = [], CHM = {}, TALK = {}, FR = {}, IT = [], ITM = {}, MUM = {}, CTRY = [], TRV = {};
 // 혼잣말: 지금 상태에 맞는 묶음에서, 다 쓸 때까지 겹치지 않게 섞어서 꺼내요
 const BAG = {};
 function mumbleOf(id, o) {
@@ -135,7 +135,7 @@ function meterHTML(o) {
   return `<div class="meters">${m('배부름', o.food, '#ffd76a')}${m('기분', o.fun, '#8fe3cc')}${m('청결', o.clean, '#8ccff5')}${m('체력', o.energy, '#c6b5ff')}
     <div class="meter wide"><div class="row"><span>애정</span><span>${st[0]}</span></div><div class="bar"><i style="width:${o.love}%;background-color:#ff8fb3"></i></div></div></div>`;
 }
-const ic = (act, img, label, pressed) => `<button class="ic" data-act="${act}" ${pressed ? 'aria-pressed="true"' : ''}><img src="assets/ui/ic_${img}.png" alt="">${label}</button>`;
+const ic = (act, img, label, pressed) => `<button class="ic" data-act="${act}" ${pressed ? 'aria-pressed="true"' : ''}><img src="assets/ui/ic_${img}.png?v=2" alt="">${label}</button>`;
 
 function render() { const y = window.scrollY; renderNow(); window.scrollTo(0, y); }
 function renderNow() {
@@ -150,7 +150,7 @@ function renderNow() {
     <div class="lcd">${roomHTML(id, o)}</div>
     <div class="say"><b>${esc(nameOf(id))} · ${moodOf(id)} · ${stateOf(o)} <span>${'♥'.repeat(TALK_MAX - t)}</span></b><span id="say">${esc(sayText || defaultSay(id, o))}</span></div>
     ${meterHTML(o)}
-    <div class="icons six">${ic('profile', 'heart', '프로필')}${ic('decor', 'decor', '꾸미기')}${ic('job', 'job', '알바')}${ic('gacha', 'gacha', '가챠')}${ic('dex', 'dex', '도감')}${ic('menu', 'home', '메뉴')}</div>
+    <div class="icons seven">${ic('profile', 'heart', '프로필')}${ic('decor', 'decor', '꾸미기')}${ic('job', 'job', '알바')}${ic('travel', 'travel', '여행')}${ic('gacha', 'gacha', '가챠')}${ic('dex', 'dex', '도감')}${ic('menu', 'home', '메뉴')}</div>
     <div class="abc"><button class="round" data-act="prev" aria-label="이전 사람">◀</button><button class="round b" data-act="talk" aria-label="말 걸기">♥</button><button class="round" data-act="next" aria-label="다음 사람">▶</button></div>
   </div>`;
   if (panel) renderPanel();
@@ -203,7 +203,7 @@ function openPanel(k, extra) { panel = Object.assign({ k }, extra || {}); render
 function closePanel() { if (!Object.keys(S.owned).length) return; panel = null; document.querySelector('.sheet')?.remove(); render(); }
 function renderPanel() {
   document.querySelector('.sheet')?.remove();
-  const f = { who: pWho, profile: pProfile, decor: pDecor, gacha: pGacha, dex: pDex, menu: pMenu, give: pGive, job: pJob, mail: pMail }[panel.k];
+  const f = { travel: pTravel, who: pWho, profile: pProfile, decor: pDecor, gacha: pGacha, dex: pDex, menu: pMenu, give: pGive, job: pJob, mail: pMail }[panel.k];
   const [title, body] = f();
   const el = document.createElement('div'); el.className = 'sheet';
   el.innerHTML = `<div class="panel" role="dialog" aria-label="${esc(title)}"><div class="phead"><h2>${esc(title)}</h2>${Object.keys(S.owned).length ? '<button class="close" data-act="close" aria-label="닫기"><img src="assets/ui/ic_back.png" alt=""></button>' : `<span class="pill coin"><img src="assets/ui/ic_coin.png" alt="">${S.coins}</span>`}</div><div class="pbody">${body}</div></div>`;
@@ -289,6 +289,45 @@ function pJob() {
 function pMail() {
   return ['편지', (S.mail || []).map(m => `<div class="card" style="display:flex;align-items:center;gap:10px"><span style="width:40px;height:40px;border:2px solid var(--ink);border-radius:10px;overflow:hidden;position:relative;background:#bfe6ff;flex-shrink:0">${face(m.id, 40)}</span><span style="flex:1;font-size:12px;line-height:1.5"><b>${esc(nameOf(m.id))}</b><br>${esc(MUM[m.id] ? pick(MUM[m.id].normal) : pick(CHM[m.id].mumble))}</span><span class="pill coin"><img src="assets/ui/ic_coin.png" alt="">+${m.c}</span></div>`).join('') + `<button class="btn yellow" data-act="getmail">모두 받기</button>`];
 }
+function pTravel() {
+  const id = cur(), o = S.owned[id], st = o.trips || {};
+  const busy = o.job ? '알바 중이라 못 가요.' : o.sleeping ? '자는 중이라 못 가요.' : '';
+  return ['여행', `${busy ? `<div class="card" style="text-align:center;font-size:12px">${busy}</div>` : ''}<div class="trips">${CTRY.map(c => `<button class="trip" data-act="gotrip" data-v="${c.k}" ${busy ? 'disabled' : ''}>
+    <span class="tpic" style="background-image:url(assets/travel/${c.k}.png)"></span>
+    <span class="tname">${esc(c.n)}${st[c.k] ? ` <small>✓${st[c.k]}</small>` : ''}</span>
+    <span class="tprice"><img src="assets/ui/ic_coin.png" alt="" style="width:12px;vertical-align:-2px"> ${c.p}</span></button>`).join('')}</div>`];
+}
+function startTrip(k) {
+  const id = cur(), o = S.owned[id], c = CTRY.find(x => x.k === k);
+  if (!c || o.job || o.sleeping) return;
+  if (S.coins < c.p) return toast('코인이 부족해요.');
+  S.coins -= c.p; save(); panel = null; document.querySelector('.sheet')?.remove();
+  const lines = [...(TRV[id] || [])].sort(() => Math.random() - .5).slice(0, 3).map(l => l.split('{place}').join(c.n).split('{call}').join(o.call || '너'));
+  const n = (FR[id] || [4, 4, 4, 4])[3], el = document.createElement('div'); el.className = 'tripview';
+  el.innerHTML = `<div class="tsay"> </div><div class="tstage" style="background-image:url(assets/travel/${k}.png)"><div class="tplace">${esc(c.n)}</div>
+    <div class="twalker"><img class="px" src="assets/ch/${id}.webp" alt=""></div><span class="emo tjoy">♪</span></div>
+    <div class="tbar"><i></i></div><button class="btn white tskip" data-tskip="1">바로 돌아오기</button>`;
+  document.body.appendChild(el);
+  const img = el.querySelector('.twalker img'), say = el.querySelector('.tsay'), bar = el.querySelector('.tbar i'), joy = el.querySelector('.tjoy');
+  const DUR = 21000, t0 = Date.now(); let f = 0, shown = -1;
+  const tick = setInterval(() => {
+    const t = Date.now() - t0; f++;
+    img.style.marginLeft = -(f % n) * 66 + 'px'; img.style.marginTop = -3 * 91 + 'px';
+    el.querySelector('.tstage').style.backgroundPositionX = -(t / 30) + 'px';
+    bar.style.width = Math.min(100, t / DUR * 100) + '%';
+    const i = Math.floor((t - 1500) / 6500);
+    if (i >= 0 && i < 3 && i !== shown && (t - 1500) % 6500 < 5000) { shown = i; say.textContent = lines[i] || ' '; say.style.visibility = lines[i] ? 'visible' : 'hidden'; }
+    else if ((t - 1500) % 6500 >= 5000) say.style.visibility = 'hidden';
+    joy.textContent = ['♪', '♥', '✦'][Math.floor(t / 1600) % 3];
+    if (t >= DUR) done();
+  }, 160);
+  function done() {
+    clearInterval(tick);
+    o.fun = 100; o.clean = clamp(o.clean - 10); o.food = clamp(o.food - 10); addLove(o, 2); o.trips = Object.assign({}, o.trips); o.trips[k] = (o.trips[k] || 0) + 1;
+    anim.heart = 20; sayText = `(${c.n} 여행 다녀왔다! 기분 최고)`; save(); el.remove(); render();
+  }
+  el.querySelector('[data-tskip]').onclick = done;
+}
 function pMenu() {
   return ['메뉴', `<div class="card" style="font-size:13px"><b>${esc(user.id)}</b></div>
     <button class="btn white" data-act="logout">로그아웃</button>`];
@@ -354,7 +393,8 @@ document.addEventListener('click', e => {
   if (a === 'mode-join' || a === 'mode-login') { startMode = a.slice(5); return renderStart(); }
   if (['feed', 'play', 'wash', 'sleep', 'talk'].includes(a)) { if (a === 'feed') { panel = null; document.querySelector('.sheet')?.remove(); } return act(a); }
   if (a === 'prev' || a === 'next') { const ids = Object.keys(S.owned), i = ids.indexOf(cur()); S.cur = ids[(i + (a === 'next' ? 1 : ids.length - 1)) % ids.length]; sayText = null; save(); return render(); }
-  if (['who', 'profile', 'decor', 'gacha', 'dex', 'menu', 'give', 'job', 'mail'].includes(a)) return openPanel(a);
+  if (['who', 'profile', 'decor', 'gacha', 'dex', 'menu', 'give', 'job', 'mail', 'travel'].includes(a)) return openPanel(a);
+  if (a === 'gotrip') return startTrip(v);
   if (a === 'dojob') { const o = S.owned[cur()], j = JOBS[+v]; o.job = { until: Date.now() + j[1] * 60000, pay: j[2] }; o.sleeping = false; save(); panel = null; document.querySelector('.sheet')?.remove(); sayText = '(다녀올게)'; return render(); }
   if (a === 'getmail') { const n = (S.mail || []).reduce((t, m) => t + m.c, 0); S.coins += n; S.mail = []; save(); panel = null; document.querySelector('.sheet')?.remove(); toast(`+${n} 코인`); return render(); }
   if (a === 'gtab') { panel.tab = v; return renderPanel(); }
@@ -405,8 +445,8 @@ setInterval(() => { if (S && user) { tickTime(); save(); } }, 60000);
 // ---------- 시작 ----------
 (async () => {
   app.innerHTML = '<div class="start"><div class="egg"><div class="scr"></div></div><div class="note">불러오는 중....</div></div>';
-  const [c, t, f, it, mu] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json'].map(u => fetch(u).then(r => r.ok ? r.json() : {})));
-  CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x])); MUM = mu;
+  const [c, t, f, it, mu, ct, tv] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json'].map(u => fetch(u).then(r => r.ok ? r.json() : {})));
+  CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x])); MUM = mu; CTRY = ct; TRV = tv;
   try { await initFirebase(); } catch (e) { console.warn('Firebase 연결 실패, 기기 저장으로', e); fb = null; }
   if (fb) {
     fb.AU.onAuthStateChanged(fb.auth, async u => { if (u && !user) { user = { uid: u.uid, id: u.email.split('@')[0] }; await enter(); } else if (!u) { user = null; render(); } });
