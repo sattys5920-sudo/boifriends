@@ -387,7 +387,9 @@ def build():
         for _ in range(2):
             edge = a & ~ndimage.binary_erosion(a); a &= ~(edge & light)
         legs = np.zeros_like(a)
-        for di in range(4): legs[di * FH * R + int(FH * R * .62):(di + 1) * FH * R] = True
+        for di in range(4):
+            legs[di * FH * R + int(FH * R * .62):(di + 1) * FH * R] = True
+            if cid not in ('gintoki',): legs[di * FH * R:di * FH * R + int(FH * R * .4)] = True   # 머리 쪽(흰 머리인 긴토키 빼고)
         for _ in range(0 if SIDE.get(cid, {}).get('nolegpeel') else 14):
             edge = a & ~ndimage.binary_erosion(a); kill = edge & light & legs
             if not kill.any(): break
