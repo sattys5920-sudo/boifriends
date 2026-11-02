@@ -171,6 +171,7 @@ def extract(path, fill_inside=False, fill_frame=0, phase=False, nofill=False, ou
             g = grey[bb]; w = white[bb]
             for i in range(1, hn + 1):
                 r = hl == i; n = r.sum()
+                if np.where(r)[0].min() > (r.shape[0]) * .62: continue   # 다리 사이 틈은 채우지 않아요
                 if g[r].sum() < max(2, n * .04) and (w[r].sum() < n * .9 or n < 400 * S * S or fill_frame): sub = sub | r
             m = m.copy(); m[bb] = sub
         if P:   # 이 프레임 주변 배경으로 체크 격자 위치를 맞춘 뒤, 격자 색과 안 맞는 픽셀(흰 셔츠 등)을 되살려요
@@ -192,6 +193,7 @@ def extract(path, fill_inside=False, fill_frame=0, phase=False, nofill=False, ou
                 keep = ~(match & (frac > .5)) & ~dark[y0:y1, x0:x1]
                 old = m[y0:y1, x0:x1]
                 add = keep & ~old
+                add[int((y1 - y0) * .62):] = False   # 다리 사이 틈은 되살리지 않아요
                 add = ndimage.binary_opening(add, iterations=max(2, int(2 * S)))        # 가는 선·잡티는 버리고 두툼한 덩어리만
                 add &= ndimage.binary_dilation(old, iterations=2)                         # 원래 몸에 붙어 있는 것만
                 add = ndimage.binary_propagation(add, mask=keep & ~old) & ndimage.binary_opening(keep & ~old, iterations=max(2, int(2 * S)))
@@ -271,9 +273,12 @@ def trim_side_hair(img, ref, clean=False):
         for y in top: reg[y, L[y] + 1:Rr[y]] = True
         lab, n = ndimage.label(dark & reg)
         ids = set(lab[top[0]][lab[top[0]] > 0])
-        for i in ids:
-            r = lab == i
-            a[r] = skc
+        allr = np.isin(lab, list(ids)) if ids else np.zeros_like(dark)
+        if allr.any():
+            yb_ = np.where(allr)[0].max()
+            band = (a[yb_ + 1:yb_ + 6, :, 3] > 0) & (np.abs(a[yb_ + 1:yb_ + 6, :, :3].astype(int) - ref).sum(2) < 60)
+            col = np.median(a[yb_ + 1:yb_ + 6][band][:, :3], axis=0) if band.any() else ref
+            a[allr] = np.array(list(col.astype(np.uint8)) + [255], np.uint8)
         # 얼굴 옆으로 삐친 머리: 위쪽 60% 줄에서 그 줄의 실제 피부 폭 밖은 지우고 외곽선만
         col2 = a[..., :3].astype(int); skin2 = (a[..., 3] > 0) & (np.abs(col2 - ref).sum(2) < 80)
         skin2 = ndimage.binary_closing(skin2, iterations=1)
@@ -364,6 +369,12 @@ def build():
         light = (rgb.min(2) > 150) & ((rgb.max(2) - rgb.min(2)) < 28)
         for _ in range(2):
             edge = a & ~ndimage.binary_erosion(a); a &= ~(edge & light)
+        legs = np.zeros_like(a)
+        for di in range(4): legs[di * FH * R + int(FH * R * .62):(di + 1) * FH * R] = True
+        for _ in range(14):
+            edge = a & ~ndimage.binary_erosion(a); kill = edge & light & legs
+            if not kill.any(): break
+            a &= ~kill
         lab, n = ndimage.label(a)
         if n: sz = ndimage.sum(a, lab, range(1, n + 1)); a &= ~np.isin(lab, 1 + np.where(sz < 8)[0])
         block[..., 3] = np.where(a, block[..., 3], 0)
