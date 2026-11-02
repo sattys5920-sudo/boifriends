@@ -21,7 +21,7 @@ SIDE = {
     'punk':           dict(left=[(2, 3), (2, 4), (2, 5), (3, 3)], right=None),
     'bartender':      dict(left=[(2, 0), (2, 1), (2, 2), (3, 1)], right=[(2, 3), (2, 4), (3, 3), (3, 4)]),
     'curly_coat':     dict(left=[(2, 0), (2, 1), (2, 2), (2, 3)], right=None),
-    'baseball':       dict(left=[(3, 0), (3, 1), (3, 2), (2, 0)], right=[(2, 1), (2, 2), (2, 3), (2, 4)], trim_front=True, clean_front=True),
+    'baseball':       dict(left=[(3, 0), (3, 1), (3, 2), (2, 0)], right=[(2, 1), (2, 2), (2, 3), (2, 4)], trim_front=True, clean_front=True, down=[0, 1, 2], nolegpeel=True),
     'ume':            dict(left='mirror', right=[(2, 1), (2, 3), (2, 4), (2, 5)], down=[0, 1, 2, 3], up=[0, 1, 2, 3]),
     'kaguya':         dict(left='mirror', right=[(2, 1), (2, 3), (2, 4), (2, 5)], down=[0, 1, 2, 3], up=[0, 1, 2, 3]),
     'ahoge':          dict(left='mirror', right=[(2, 2), (2, 3), (2, 4), (3, 2)], down=[0, 1, 2], up=[0, 1, 2]),
@@ -301,6 +301,23 @@ def trim_side_hair(img, ref, clean=False):
                 row = a[y, lo_:hi_ + 1]; hole = row[:, 3] == 0; row[hole] = skc
                 for x in (lo_ - 1, hi_ + 1):
                     if 0 <= x < w and a[y, x, 3] == 0: a[y, x] = OL
+        # 옆머리: 모자챙 끝에서 귀 높이까지 매끈한 검은 머리로 꽉 채워요 (삐침 없이)
+        brim = [yy for yy in range(max(0, ys[0] - 8), ys[0] + 3) if (a[yy, :, 3] > 0).sum() > 0 and (a[yy, :, :3].astype(int).max(1)[a[yy, :, 3] > 0] < 95).mean() > .6]
+        if brim:
+            yb = brim[-1]; xb = np.where(a[yb, :, 3] > 0)[0]; bl, br = xb.min() + 2, xb.max() - 2
+            yend = ys[0] + int(len(ys) * .55)
+            for y in range(yb + 1, min(h, yend)):
+                t = (y - yb) / max(1, yend - yb); t = t ** 1.6
+                sk = np.where(skin2[y])[0] if y < h else []
+                if not len(sk): continue
+                lo_, hi_ = sk.min(), sk.max()
+                el = int(round(bl + (lo_ - 1 - bl) * t)); er = int(round(br + (hi_ + 1 - br) * t))
+                for x in range(max(0, el), lo_):
+                    a[y, x] = hair
+                for x in range(hi_ + 1, min(w, er + 1)):
+                    a[y, x] = hair
+                if 0 <= el - 1 < w: a[y, el - 1] = OL
+                if 0 <= er + 1 < w: a[y, er + 1] = OL
         return a
     above = [yy for yy in range(max(0, ys[0] - 4), ys[0]) if (a[yy, :, 3] > 0).any()]
     if above:
@@ -344,7 +361,7 @@ def build():
             for ri, row in enumerate(rows): groups[force[ri]] += row
         else:
             groups['down'] = [rows[0][k] for k in SIDE[cid].get('down', range(len(rows[0])))]; groups['up'] = [rows[1][k] for k in SIDE[cid].get('up', range(len(rows[1])))]
-            if SIDE[cid].get('trim_front'): ref = skin_ref(rows[0][0]['img']); groups['down'] = [dict(f, img=trim_side_hair(f['img'], ref, SIDE[cid].get('clean_front', False))) for f in rows[0]]
+            if SIDE[cid].get('trim_front'): ref = skin_ref(rows[0][0]['img']); groups['down'] = [dict(f, img=trim_side_hair(f['img'], ref, SIDE[cid].get('clean_front', False))) for f in [rows[0][k] for k in SIDE[cid].get('down', range(len(rows[0])))]]
             sd = SIDE[cid]
             groups['left'] = [rows[r][k] for r, k in sd['left']] if sd['left'] != 'mirror' else [dict(rows[r][k], img=rows[r][k]['img'][:, ::-1]) for r, k in sd['right']]
             groups['right'] = [rows[r][k] for r, k in sd['right']] if sd['right'] and sd['right'] != 'mirror' else [dict(f, img=f['img'][:, ::-1]) for f in groups['left']]
@@ -371,7 +388,7 @@ def build():
             edge = a & ~ndimage.binary_erosion(a); a &= ~(edge & light)
         legs = np.zeros_like(a)
         for di in range(4): legs[di * FH * R + int(FH * R * .62):(di + 1) * FH * R] = True
-        for _ in range(14):
+        for _ in range(0 if SIDE.get(cid, {}).get('nolegpeel') else 14):
             edge = a & ~ndimage.binary_erosion(a); kill = edge & light & legs
             if not kill.any(): break
             a &= ~kill
