@@ -137,7 +137,9 @@ function meterHTML(o) {
 }
 const ic = (act, img, label, pressed) => `<button class="ic" data-act="${act}" ${pressed ? 'aria-pressed="true"' : ''}><img src="assets/ui/ic_${img}.png?v=2" alt="">${label}</button>`;
 
-function render() { const y = window.scrollY; renderNow(); window.scrollTo(0, y); }
+let dropStyle = null;
+function placeDrop() { const r = document.querySelector('.lcd .room'); if (!r || !dropStyle || $('#drop')) return; const c = document.createElement('button'); c.id = 'drop'; c.dataset.act = 'coin'; c.setAttribute('aria-label', '동전 줍기'); c.style.cssText = dropStyle; r.appendChild(c); }
+function render() { const y = window.scrollY; renderNow(); placeDrop(); animStep(false); window.scrollTo(0, y); }
 function renderNow() {
   if (!user) return renderStart();
   if (!Object.keys(S.owned).length) { app.innerHTML = shellEmpty(); if (panel?.k !== 'gacha') openPanel('gacha'); return; }
@@ -403,7 +405,7 @@ document.addEventListener('click', e => {
   if (a === 'pick') { S.cur = b.dataset.id; sayText = null; save(); panel = null; document.querySelector('.sheet')?.remove(); return render(); }
   if (a === 'logout') { panel = null; document.querySelector('.sheet')?.remove(); return logOut(); }
   if (a === 'pull') return pull();
-  if (a === 'coin') { const n = 10 + Math.floor(Math.random() * 21); S.coins += n; b.remove(); toast(`+${n} 코인`); save(); document.querySelector('.pill.coin').lastChild.textContent = S.coins.toLocaleString('ko-KR'); return; }
+  if (a === 'coin') { const n = 10 + Math.floor(Math.random() * 21); S.coins += n; b.remove(); dropStyle = null; toast(`+${n} 코인`); save(); document.querySelector('.pill.coin').lastChild.textContent = S.coins.toLocaleString('ko-KR'); return; }
   if (a === 'dtab') { panel.tab = v; return renderPanel(); }
   if (a === 'dslot') { panel.slot = v; return renderPanel(); }
   const o = S.owned[cur()]; if (!o) return;
@@ -419,16 +421,22 @@ document.addEventListener('click', e => {
 
 // ---------- 움직임 ----------
 const MODES = ['walk', 'walk', 'idle', 'back', 'hop', 'walk', 'idle'];
-setInterval(() => {
+setInterval(() => animStep(true), 170);
+function animStep(adv) {
   const man = $('#man'); if (!man || !S) return;
   const id = cur(), o = S.owned[id], A = anim, n = FR[id] || [4, 4, 4, 4];
+  if (!adv) return paintMan(man, id, o, A, n);
   A.tick++; A.f++; A.t--;
   if (A.mode === 'walk') { A.x += A.dir * 0.025; if (Math.abs(A.x) > 0.9) { A.dir = -A.dir; A.x = Math.max(-0.9, Math.min(0.9, A.x)); } }
   if (A.t <= 0) { A.mode = pick(MODES); A.t = 12 + Math.floor(Math.random() * 18); if (Math.random() < .5) A.dir = -A.dir; }
-  if (Date.now() - (S.lastDrop || 0) > DROP_MS && !$('#drop') && !o.job) { const r = document.querySelector('.lcd .room'); if (r) { const c = document.createElement('button'); c.id = 'drop'; c.dataset.act = 'coin'; c.setAttribute('aria-label', '동전 줍기'); c.style.cssText = `position:absolute;left:${10 + Math.random() * 75}%;bottom:${4 + Math.random() * 18}%;width:30px;height:30px;padding:0;border:0;background:url(assets/ui/ic_coin.png) center/24px no-repeat;z-index:3;animation:emo 1s ease-in-out infinite`; r.appendChild(c); S.lastDrop = Date.now(); } }
+  if (Date.now() - (S.lastDrop || 0) > DROP_MS && !$('#drop') && !o.job) { const r = document.querySelector('.lcd .room'); if (r) { dropStyle = `position:absolute;left:${10 + Math.random() * 75}%;bottom:${4 + Math.random() * 18}%;width:30px;height:30px;padding:0;border:0;background:url(assets/ui/ic_coin.png) center/24px no-repeat;z-index:3;animation:emo 1s ease-in-out infinite`; placeDrop(); S.lastDrop = Date.now(); } }
   if (A.tick % 45 === 0) A.mumT = mumbleOf(id, o); else if (A.tick % 45 === 20) A.mumT = '';
   if (A.heart > 0) A.heart--;
   if (o.job) { man.style.display = 'none'; $('#shd').style.display = 'none'; $('#emo').hidden = true; $('#mum').hidden = true; const jl = $('#jobleft'); if (jl) jl.textContent = timeLeft(o.job.until); if (Date.now() >= o.job.until) { tickTime(); save(); render(); } return; }
+  paintMan(man, id, o, A, n);
+}
+function paintMan(man, id, o, A, n) {
+  if (o.job) { man.style.display = 'none'; return; }
   const sl = o.sleeping, row = sl ? 0 : A.mode === 'walk' ? (A.dir < 0 ? 2 : 3) : A.mode === 'back' ? 1 : 0;
   const col = A.mode === 'walk' && !sl ? A.f % n[row] : 0, x = sl ? 0 : A.x, left = `calc(50% + ${x * 38}% - 33px)`;
   const img = man.firstElementChild; img.style.marginLeft = -col * 66 + 'px'; img.style.marginTop = -row * 91 + 'px';
@@ -439,7 +447,7 @@ setInterval(() => {
   emo.hidden = !e; if (e) { emo.textContent = e[0]; emo.style.color = e[1]; emo.style.left = `calc(50% + ${x * 38}% + 14px)`; emo.style.bottom = sl ? '30%' : '52%'; }
   const mum = $('#mum'), mt = !sl ? (A.mumT || '') : '';
   mum.hidden = !mt; if (mt) { mum.textContent = mt; mum.style.left = `clamp(4px, calc(50% + ${x * 38}% - 70px), calc(100% - 64%))`; }
-}, 170);
+}
 setInterval(() => { if (S && user) { tickTime(); save(); } }, 60000);
 
 // ---------- 시작 ----------
