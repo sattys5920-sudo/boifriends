@@ -28,9 +28,9 @@ SIDE = {
     'blindfold':      dict(left=[(3, 1), (3, 2), (3, 3), (3, 4)], right=[(2, 0), (2, 2), (2, 3), (2, 4)], down=[0, 1, 2, 3], up=[0, 1, 2, 3]),
     'headphone':      dict(left='mirror', right=[(2, 1), (2, 2), (2, 3), (2, 4)]),
     'nifuji':         dict(left=[(3, 0), (3, 1)], right=[(2, 1), (2, 2)]),
-    'gintoki':        dict(left=[(2, 1), (2, 2), (2, 3), (2, 4)], right='mirror', fill_inside=True),
-    'usui':           dict(left='mirror', right=[(2, 1), (2, 2), (2, 3), (2, 4)], up=[0, 1, 2, 4]),
-    'izumi':          dict(left='mirror', right=[(2, 1), (2, 2), (3, 2), (3, 3)], fill_frame=3),
+    'gintoki':        dict(left=[(2, 1), (2, 2), (2, 3), (2, 4)], right='mirror', fill_inside=True, phase=False, nofill=True),
+    'usui':           dict(left='mirror', right=[(2, 1), (2, 2), (2, 3), (2, 4)], up=[0, 1, 2, 4], down=[1, 2, 3, 4]),
+    'izumi':          dict(left='mirror', right=[(2, 1), (2, 2), (3, 2), (3, 3)], fill_frame=3, phase=False),
     'ponytail':       dict(left=[(3, 0), (3, 1), (3, 2), (3, 3)], right=[(2, 1), (2, 2), (2, 3), (2, 4)]),
     'spiky':          dict(left=[(3, 0), (3, 1), (3, 2), (3, 3)], right=[(2, 1), (2, 2), (2, 3), (2, 4)], fill_frame=3),
     'kyon':           dict(left=[(3, 0), (3, 1), (3, 2), (3, 3)], right=[(2, 1), (2, 2), (2, 3), (2, 4)]),
@@ -41,6 +41,7 @@ SIDE = {
     'mint':           dict(left=[(2, 1), (2, 2), (2, 3), (2, 4)], right=None),
     'karate':         dict(left=[(2, 1), (2, 2), (3, 1), (3, 2)], right=[(2, 4), (3, 3), (3, 4)], fill_inside=True),
 }
+PHASE_ALL = True
 SHEETS = [  # id, 파일, 이름, 맵, 칸, 대사, 줄 순서 강제(로봇)
     ('blue', 'blue.png', '니노', 'acca_dowa', [16, 16], ['…운하 바람이 좋네.', '바동은 처음이야? 저 하얀 건물이 ACCA 본부야.', '도와 쪽으로 가려면 트램 길을 따라 동쪽 끝까지 가 봐.', '정류장 옆 가판대에서 담배 한 개비 사 오면 더 얘기해 줄게.'], None),
     ('curly_suit', 'curly_suit.png', '쿠지 치카이', 'tk_asakusa', [32, 17], ['강 보러 왔어? 여기 앉아서 멍하니 있기 좋지.', '나는 그냥… 일 쉬는 중이야. 비밀로 해 줘.', '참배길 노점 당고는 꼭 먹어 봐. 세 번째 가게가 제일이야.'], None),
@@ -70,7 +71,32 @@ SHEETS = [  # id, 파일, 이름, 맵, 칸, 대사, 줄 순서 강제(로봇)
     ('karate', 'karate.png', '쿄고쿠 마코토', 'tk_inaka', [35, 19], ['오스!', '이 신사 계단을 매일 아침 100번 오르내리는 게 수련이야.', '시골 공기가 좋아서 집중이 잘 돼. 너도 같이 뛸래?'], None),
 ]
 
-def extract(path, fill_inside=False, fill_frame=0):
+
+def checker_phase_bg(im):
+    """체크무늬가 일정한 칸 크기로 반복되면, 각 픽셀이 '그 자리의 체크 칸 색'과 같은지로 배경을 판단해요.
+       흰 셔츠처럼 밝은 칸과 색이 비슷해도 어두운 칸 자리에서는 안 맞으니 캐릭터로 남아요."""
+    Hh, Ww = im.shape[:2]
+    def edges(line):
+        lum = line.mean(1)
+        if lum.max() - lum.min() < 15: return None
+        b = lum > (lum.max() + lum.min()) / 2
+        return np.where(np.diff(b.astype(int)) != 0)[0] + 1
+    e = edges(im[2]); f = edges(im[:, 2])
+    if e is None or f is None or len(e) < 6 or len(f) < 6: return None
+    P = int(np.median(np.diff(e)))
+    if P < 6 or np.mean(np.abs(np.diff(e)[:8] - P) <= 1) < .8: return None
+    ox, oy = e[0] % P, f[0] % P
+    yy, xx = np.mgrid[0:Hh, 0:Ww]
+    par = (((xx - ox) // P) + ((yy - oy) // P)) % 2
+    # 두 칸 색: 테두리에서 같은 parity끼리 평균
+    band = np.zeros((Hh, Ww), bool); band[:6] = band[-6:] = True; band[:, :6] = band[:, -6:] = True
+    c0 = np.median(im[band & (par == 0)], axis=0); c1 = np.median(im[band & (par == 1)], axis=0)
+    exp = np.where(par[..., None] == 0, c0, c1)
+    match = np.abs(im - exp).sum(2) < 26
+    frac = ndimage.uniform_filter(match.astype(float), 7)
+    return (match & (frac > .72)) | (frac > .9)
+
+def extract(path, fill_inside=False, fill_frame=0, phase=False, nofill=False):
     im = np.asarray(Image.open(path).convert('RGB')).astype(int); Hh, Ww = im.shape[:2]
     mx, mn = im.max(2), im.min(2)
     cand = (mx - mn < 30) & (mn > 135); S = max(Ww / 1152, Hh / 928)   # 시트 크기·비율이 달라도 같은 기준으로
@@ -110,6 +136,11 @@ def extract(path, fill_inside=False, fill_frame=0):
             fillids = [i + 1 for i in range(hn) if has_light[i] < 3 and has_dark[i] < size[i] * .4]
             bg &= ~np.isin(hl, fillids)
     fg = ~bg
+    P = None
+    if phase:
+        e = np.where(np.diff((im[2].mean(1) > im[2].mean()).astype(int)) != 0)[0]
+        if len(e) > 6: P = int(np.median(np.diff(e)))
+        cL, cD = hi.astype(float), lo.astype(float)
     if fill_inside:   # 흰 머리처럼 배경색과 비슷한 부분: 테두리 틈을 메운 뒤 안쪽을 통째로 캐릭터로 채워요
         fg = ndimage.binary_fill_holes(ndimage.binary_closing(fg, iterations=4)) | fg
     lab2, n2 = ndimage.label(fg, structure=np.ones((3, 3)))
@@ -131,10 +162,48 @@ def extract(path, fill_inside=False, fill_frame=0):
     for (bi, s) in bodies:
         ids = [k for k, v in owner.items() if v == bi]
         m = np.isin(lab2, ids)
-        if fill_frame:   # 흰 셔츠·날개처럼 배경으로 빠진 안쪽 구멍을 프레임 하나 안에서만 메워요
-            ys, xs = np.where(m); bb = (slice(max(0, ys.min() - 4), ys.max() + 5), slice(max(0, xs.min() - 4), xs.max() + 5))
-            sub = m[bb]; sub = ndimage.binary_fill_holes(ndimage.binary_closing(sub, iterations=fill_frame)) | sub
+        # 흰 셔츠·날개처럼 배경으로 잘못 빠진 안쪽 부분을 프레임 하나 안에서 되살려요.
+        #   틈을 살짝 메워서 생긴 '안쪽 구멍' 중, 체크무늬 어두운 칸이 거의 없는(=진짜 배경이 아닌) 덩어리만 채워요
+        ys, xs = np.where(m); bb = (slice(max(0, ys.min() - 6), ys.max() + 7), slice(max(0, xs.min() - 6), xs.max() + 7))
+        sub = m[bb] if not nofill else None; k = max(3, fill_frame, int(10 * S))
+        hl, hn = ndimage.label(ndimage.binary_fill_holes(ndimage.binary_closing(sub, iterations=k)) & ~sub) if sub is not None else (None, 0)
+        if hn:
+            g = grey[bb]; w = white[bb]
+            for i in range(1, hn + 1):
+                r = hl == i; n = r.sum()
+                if g[r].sum() < max(2, n * .04) and (w[r].sum() < n * .9 or n < 400 * S * S or fill_frame): sub = sub | r
             m = m.copy(); m[bb] = sub
+        if P:   # 이 프레임 주변 배경으로 체크 격자 위치를 맞춘 뒤, 격자 색과 안 맞는 픽셀(흰 셔츠 등)을 되살려요
+            ys, xs = np.where(m); y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+            Y0, Y1, X0, X1 = max(0, y0 - 14), min(Hh, y1 + 14), max(0, x0 - 14), min(Ww, x1 + 14)
+            ring = np.ones((Y1 - Y0, X1 - X0), bool); ring[y0 - Y0:y1 - Y0, x0 - X0:x1 - X0] = False
+            ry, rx = np.where(ring); sel = np.linspace(0, len(ry) - 1, min(600, len(ry))).astype(int); ry, rx = ry[sel] + Y0, rx[sel] + X0
+            cols = im[ry, rx].astype(float); dL = np.abs(cols - cL).sum(1); dD = np.abs(cols - cD).sum(1)
+            best, bo = -1, (0, 0)
+            for oy in range(0, 2 * P, 2):
+                for ox in range(0, 2 * P, 2):
+                    par = (((rx + ox) // P) + ((ry + oy) // P)) % 2
+                    sc = np.mean(np.where(par == 0, dL, dD) < 24)
+                    if sc > best: best, bo = sc, (ox, oy)
+            if best > .75:
+                yy, xx = np.mgrid[y0:y1, x0:x1]; par = (((xx + bo[0]) // P) + ((yy + bo[1]) // P)) % 2
+                exp = np.where(par[..., None] == 0, cL, cD); match = np.abs(im[y0:y1, x0:x1] - exp).sum(2) < 26
+                frac = ndimage.uniform_filter(match.astype(float), 5)
+                keep = ~(match & (frac > .5)) & ~dark[y0:y1, x0:x1]
+                old = m[y0:y1, x0:x1]
+                add = keep & ~old
+                add = ndimage.binary_opening(add, iterations=max(2, int(2 * S)))        # 가는 선·잡티는 버리고 두툼한 덩어리만
+                add &= ndimage.binary_dilation(old, iterations=2)                         # 원래 몸에 붙어 있는 것만
+                add = ndimage.binary_propagation(add, mask=keep & ~old) & ndimage.binary_opening(keep & ~old, iterations=max(2, int(2 * S)))
+                m = m.copy(); m[y0:y1, x0:x1] = old | add
+                # 가장자리에 붙은 체크무늬 색 픽셀(흰 줄·점)은 두 번 깎아내요
+                sub = m[y0:y1, x0:x1]; px_ = im[y0:y1, x0:x1].astype(float)
+                bgcol = (np.abs(px_ - cL).sum(2) < 30) | (np.abs(px_ - cD).sum(2) < 30)
+                for _ in range(2):
+                    edge = sub & ~ndimage.binary_erosion(sub); sub = sub & ~(edge & bgcol & add)
+                lab4, n4 = ndimage.label(sub)
+                if n4 > 1: sz = ndimage.sum(sub, lab4, range(1, n4 + 1)); sub = (lab4 == (1 + int(np.argmax(sz)))) | (sub & np.isin(lab4, 1 + np.where(sz > sz.max() * .02)[0]))
+                m[y0:y1, x0:x1] = sub
         ys, xs = np.where(m); y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
         crop = rgba[y0:y1, x0:x1].copy(); crop[..., 3] = np.where(m[y0:y1, x0:x1], 255, 0)
         frames.append(dict(img=crop, cx=(x0 + x1) / 2, cy=(y0 + y1) / 2, top=y0, bot=y1))
@@ -203,7 +272,7 @@ def shrink(img, scale):
 def build():
     sheet_rows, meta = [], []
     for (cid, fn, name, mp, tile, lines, force) in SHEETS:
-        rows = extract('chars_src/' + fn, fill_inside=SIDE.get(cid, {}).get('fill_inside', False), fill_frame=SIDE.get(cid, {}).get('fill_frame', 0))
+        rows = extract('chars_src/' + fn, fill_inside=SIDE.get(cid, {}).get('fill_inside', False), fill_frame=SIDE.get(cid, {}).get('fill_frame', 0), phase=SIDE.get(cid, {}).get('phase', PHASE_ALL), nofill=SIDE.get(cid, {}).get('nofill', False))
         allf = [(ri, f) for ri, row in enumerate(rows) for f in row]
         hmax = max(f['img'].shape[0] for _, f in allf); scale = TARGET * R / hmax
         groups = {d: [] for d in DIRS}
