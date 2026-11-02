@@ -37,6 +37,7 @@ SIDE = {
     'chiro':          dict(left=[(2, 0), (2, 1), (3, 1), (3, 2)], right=[(2, 2), (2, 3), (2, 4), (3, 3)]),
     'saiki':          dict(left=[(2, 1), (2, 2), (2, 3), (2, 4)], right=None),
     'nozaki':         dict(left=[(3, 0), (3, 1), (3, 2)], right=[(2, 0), (2, 1), (2, 3), (2, 4)]),
+    'shima':          dict(left=[(3, 1), (3, 2), (3, 3), (3, 4)], right=[(2, 1), (2, 2), (2, 3), (2, 4)]),
     'mint':           dict(left=[(2, 1), (2, 2), (2, 3), (2, 4)], right=None),
     'karate':         dict(left=[(2, 1), (2, 2), (3, 1), (3, 2)], right=[(2, 4), (3, 3), (3, 4)], fill_inside=True),
 }
@@ -64,6 +65,7 @@ SHEETS = [  # id, 파일, 이름, 맵, 칸, 대사, 줄 순서 강제(로봇)
     ('chiro', 'chiro.png', '치로 하트', 'acca_badon', [31, 23], ['…담배 사러 왔나.'], None),
     ('saiki', 'saiki.png', '사이키 쿠스오', 'tk_shibuya', [36, 27], ['(…또 귀찮은 일이 생겼군.)'], None),
     ('nozaki', 'nozaki.png', '노자키 우메타로', 'tk_harajuku', [18, 24], ['…취재 중이야.'], None),
+    ('shima', 'shima.png', '시마 소스케', 'tk_harajuku', [26, 30], ['음~ 안녕.'], None),
     ('mint', 'mint.png', '우고 카나토', 'tk_ginza', [32, 29], ['…아, 안녕.'], None),
     ('karate', 'karate.png', '쿄고쿠 마코토', 'tk_inaka', [35, 19], ['오스!', '이 신사 계단을 매일 아침 100번 오르내리는 게 수련이야.', '시골 공기가 좋아서 집중이 잘 돼. 너도 같이 뛸래?'], None),
 ]
