@@ -37,7 +37,7 @@ SIDE = {
     'chiro':          dict(left=[(2, 0), (2, 1), (3, 1), (3, 2)], right=[(2, 2), (2, 3), (2, 4), (3, 3)]),
     'saiki':          dict(left=[(2, 1), (2, 2), (2, 3), (2, 4)], right=None),
     'nozaki':         dict(left=[(3, 0), (3, 1), (3, 2)], right=[(2, 0), (2, 1), (2, 3), (2, 4)]),
-    'shima':          dict(left=[(3, 1), (3, 2), (3, 3), (3, 4)], right=[(2, 1), (2, 2), (2, 3), (2, 4)]),
+    'shima':          dict(right=[(2, 0), (3, 2), (2, 3), (3, 3)], left='mirror'),
     'mint':           dict(left=[(2, 1), (2, 2), (2, 3), (2, 4)], right=None, outline=True),
     'karate':         dict(left=[(2, 1), (2, 2), (3, 1), (3, 2)], right=[(2, 4), (3, 3), (3, 4)], fill_inside=True),
 }
