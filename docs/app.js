@@ -161,8 +161,8 @@ function shellEmpty() {
     <button class="btn yellow" data-act="gacha" style="width:100%"><img src="assets/ui/ic_gacha.png" alt="" style="width:20px;vertical-align:-4px"> 가챠</button></div>`;
 }
 function defaultSay(id, o) {
-  if (o.sleeping) return '(쿨쿨…)';
-  if (o.food < 30) return '(꼬르륵…)';
+  if (o.sleeping) return '(쿨쿨....)';
+  if (o.food < 30) return '(꼬르륵....)';
   return '';
 }
 
@@ -276,7 +276,7 @@ function give(k) {
   if (it.t === 'food') o.food = clamp(o.food + 18); else o.fun = clamp(o.fun + 15);
   let msg;
   if (c.li.includes(k)) { addLove(o, 2); anim.heart = 16; if (!o.known.l.includes(k)) { o.known.l.push(k); S.coins += 30; } msg = `(${it.n}! 눈이 반짝였다 ♥)`; }
-  else if (c.di.includes(k)) { o.love = clamp(o.love - 1); anim.angry = 16; if (!o.known.d.includes(k)) o.known.d.push(k); msg = `(${it.n}… 표정이 굳었다)`; }
+  else if (c.di.includes(k)) { o.love = clamp(o.love - 1); anim.angry = 16; if (!o.known.d.includes(k)) o.known.d.push(k); msg = `(${it.n}.... 표정이 굳었다)`; }
   else { addLove(o, 1); msg = `(${it.n}, 고마워)`; }
   sayText = msg; panel = null; document.querySelector('.sheet')?.remove(); save(); render();
 }
@@ -299,9 +299,9 @@ function act(kind) {
   const id = cur(), o = S.owned[id]; if (!o) return;
   const say = t => { sayText = t; };
   if (o.job) { say('(알바 갔어요)'); return render(); }
-  if (o.sleeping && kind !== 'sleep') { say('(쿨쿨…)'); return render(); }
-  if (kind === 'feed') { if (o.food >= 95) say('(배불러…)'); else { o.food = clamp(o.food + 25); addLove(o, 1); S.coins += 15; anim.heart = 10; say('(냠냠)'); } }
-  if (kind === 'play') { if (o.energy < 15) say('(피곤해…)'); else { o.fun = clamp(o.fun + 22); o.energy = clamp(o.energy - 12); addLove(o, 1); S.coins += 15; anim.heart = 10; anim.mode = 'hop'; anim.t = 10; say('(신난다!)'); } }
+  if (o.sleeping && kind !== 'sleep') { say('(쿨쿨....)'); return render(); }
+  if (kind === 'feed') { if (o.food >= 95) say('(배불러....)'); else { o.food = clamp(o.food + 25); addLove(o, 1); S.coins += 15; anim.heart = 10; say('(냠냠)'); } }
+  if (kind === 'play') { if (o.energy < 15) say('(피곤해....)'); else { o.fun = clamp(o.fun + 22); o.energy = clamp(o.energy - 12); addLove(o, 1); S.coins += 15; anim.heart = 10; anim.mode = 'hop'; anim.t = 10; say('(신난다!)'); } }
   if (kind === 'wash') { if (o.clean >= 95) say('(반짝반짝)'); else { o.clean = clamp(o.clean + 35); S.coins += 10; say('(뽀득뽀득)'); } }
   if (kind === 'sleep') { o.sleeping = !o.sleeping; say(o.sleeping ? '(잘 자)' : '(좋은 아침)'); }
   if (kind === 'talk') {
@@ -395,7 +395,7 @@ setInterval(() => {
   man.style.left = left; man.style.display = sl ? 'none' : ''; $('#shd').style.display = sl ? 'none' : ''; man.classList.toggle('hop', A.mode === 'hop' && !sl);
   $('#shd').style.left = `calc(50% + ${x * 38}% - 27px)`;
   if (A.angry > 0) A.angry--;
-  const emo = $('#emo'), e = sl ? null : A.angry > 0 ? ['…!?', '#c0392b'] : A.heart > 0 ? ['♥ ♥', '#e0457b'] : o.food < 40 ? ['꼬르륵…', '#c47a1a'] : o.clean < 35 ? ['킁킁…', '#5b8a3c'] : o.fun > 75 ? ['♪', '#2f8f73'] : null;
+  const emo = $('#emo'), e = sl ? null : A.angry > 0 ? ['....!?', '#c0392b'] : A.heart > 0 ? ['♥ ♥', '#e0457b'] : o.food < 40 ? ['꼬르륵....', '#c47a1a'] : o.clean < 35 ? ['킁킁....', '#5b8a3c'] : o.fun > 75 ? ['♪', '#2f8f73'] : null;
   emo.hidden = !e; if (e) { emo.textContent = e[0]; emo.style.color = e[1]; emo.style.left = `calc(50% + ${x * 38}% + 14px)`; emo.style.bottom = sl ? '30%' : '52%'; }
   const mum = $('#mum'), mt = !sl ? (A.mumT || '') : '';
   mum.hidden = !mt; if (mt) { mum.textContent = mt; mum.style.left = `clamp(4px, calc(50% + ${x * 38}% - 70px), calc(100% - 64%))`; }
@@ -404,7 +404,7 @@ setInterval(() => { if (S && user) { tickTime(); save(); } }, 60000);
 
 // ---------- 시작 ----------
 (async () => {
-  app.innerHTML = '<div class="start"><div class="egg"><div class="scr"></div></div><div class="note">불러오는 중…</div></div>';
+  app.innerHTML = '<div class="start"><div class="egg"><div class="scr"></div></div><div class="note">불러오는 중....</div></div>';
   const [c, t, f, it, mu] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json'].map(u => fetch(u).then(r => r.ok ? r.json() : {})));
   CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x])); MUM = mu;
   try { await initFirebase(); } catch (e) { console.warn('Firebase 연결 실패, 기기 저장으로', e); fb = null; }
