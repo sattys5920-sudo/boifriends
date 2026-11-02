@@ -25,7 +25,7 @@ const stageOf = l => STAGES.filter(s => l >= s[2]).pop();
 const MOODS = ['기분 최고', '설렘', '들뜸', '나른함', '심술', '시무룩', '멍함', '두근두근', '느긋함', '투덜투덜'];
 function moodOf(id) { let h = 0; for (const ch of today() + id) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return MOODS[h % MOODS.length]; }
 function stateOf(o) { if (o.sleeping) return '쿨쿨'; const a = []; if (o.food < 35) a.push('배고픔'); if (o.energy < 30) a.push('졸림'); if (o.fun < 35) a.push('심심함'); if (o.clean < 35) a.push('꼬질꼬질'); return a.join(' · ') || '만족'; }
-const JOB_NAME = { curly_suit: '소바집 배달', blue: '사진 촬영 보조', blonde_student: '신발 가게', mole: '학원 강사', punk: '스튜디오 세션', bartender: '바텐더', curly_coat: '도서관 정리', mint: '잡지 모델', karate: '도장 사범 대리', baseball: '배팅 센터', spiky: '탈환 의뢰', kyon: '편의점', ponytail: '수박 농장', chiro: '담배 가게 카운터', saiki: '라멘집 (몰래)', nozaki: '만화 어시스턴트', ahoge: '과외', blindfold: '서버 관리', headphone: '영상 편집', gintoki: '해결사 의뢰', nifuji: '게임 테스터', usui: '메이드 카페 주방', izumi: '사신 업무', shima: '카페', hidden: '편의점 야간' };
+const JOB_NAME = { curly_suit: '소바집 배달', blue: '사진 촬영 보조', blonde_student: '누나네 카페', mole: '학원 강사', punk: '스튜디오 세션', bartender: '바텐더', curly_coat: '도서관 정리', mint: '잡지 모델', karate: '도장 사범 대리', baseball: '배팅 센터', spiky: '탈환 의뢰', kyon: '편의점', ponytail: '수박 농장', chiro: '담배 가게 카운터', saiki: '라멘집 (몰래)', nozaki: '만화 어시스턴트', ahoge: '과외', blindfold: '서버 관리', headphone: '영상 편집', gintoki: '해결사 의뢰', nifuji: '게임 테스터', usui: '메이드 카페 주방', izumi: '사신 업무', shima: '카페', hidden: '편의점 야간' };
 const JOBS = [['30 분', 30, 40], ['3 시간', 180, 150], ['8 시간', 480, 350]];
 const DROP_MS = 5 * 60 * 1000;
 const GACHA = 300, DUP = 150, TALK_MAX = 3, LOVE_DAY = 4;   // 애정은 하루 최대 4 → 한 단계(25)에 약 일주일
