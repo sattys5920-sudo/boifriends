@@ -7,7 +7,23 @@ from PIL import Image
 from scipy import ndimage
 import tk_chars as T
 
+def key_green(a):
+    """초록(#00FF00) 배경용: 보라·분홍 캐릭터는 이쪽이 안전해요"""
+    rgb = a[..., :3].astype(int); R, G, B = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    fg = ~(G - np.maximum(R, B) > 70)
+    lab, n = ndimage.label(fg)
+    if n > 1:
+        sz = ndimage.sum(fg, lab, range(1, n + 1)); fg &= np.isin(lab, 1 + np.where(sz >= max(40, sz.max() * .02))[0])
+    for _ in range(2):
+        edge = fg & ~ndimage.binary_erosion(fg); fg &= ~(edge & (G - np.maximum(R, B) > 35))
+    near = ndimage.binary_dilation(~fg, iterations=3) & fg
+    rgb = rgb.copy(); rgb[..., 1] = np.minimum(G, np.maximum(R, B) + 10 * ~near + 1000 * ~near)   # 테두리 초록기 빼기
+    out = np.zeros(a.shape[:2] + (4,), np.uint8); out[..., :3] = np.clip(rgb, 0, 255); out[..., 3] = np.where(fg, 255, 0)
+    return out
+
 def key(a):
+    c = a[:4, :4, :3].reshape(-1, 3).astype(int).mean(0)
+    if c[1] > 180 and c[0] < 100 and c[2] < 100: return key_green(a)
     rgb = a[..., :3].astype(int); R, G, B = rgb[..., 0], rgb[..., 1], rgb[..., 2]
     mag = (np.minimum(R, B) - G > 70) & (np.abs(R - B) < 90)          # 배경과 거의 같은 색
     fg = ~mag
