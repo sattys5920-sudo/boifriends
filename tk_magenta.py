@@ -15,7 +15,8 @@ def key(a):
     if n > 1:   # 작은 부스러기 버리기
         sz = ndimage.sum(fg, lab, range(1, n + 1)); fg &= np.isin(lab, 1 + np.where(sz >= max(40, sz.max() * .02))[0])
     fg = ndimage.binary_fill_holes(fg)
-    fg &= ~((np.minimum(R, B) - G > 55) & (R > 150) & (B > 150))   # 연기·반짝이에 남은 분홍 번짐
+    near = ndimage.binary_dilation(~fg, iterations=3)   # 배경 바로 옆만 (눈 같은 안쪽 분홍은 그대로)
+    fg &= ~(near & (np.minimum(R, B) - G > 55) & (R > 150) & (B > 150))   # 연기·반짝이에 남은 분홍 번짐
     # 가장자리 분홍 번짐 빼기: 테두리 1~2 px 중 마젠타 기운이 남은 픽셀
     for _ in range(2):
         edge = fg & ~ndimage.binary_erosion(fg)
@@ -26,11 +27,18 @@ def key(a):
 
 def cells(path, cols=5, rows=4):
     im = np.asarray(Image.open(path).convert('RGB')); H, W = im.shape[:2]; a = key(im)
+    def cuts(prof, n, L):   # 칸 경계는 그 근처에서 캐릭터가 가장 적게 걸치는 줄로 (시트가 격자에 딱 안 맞아도)
+        out = [0]
+        for k in range(1, n):
+            b = int(k * L / n); w = int(L / n * .22); seg = prof[b - w:b + w]
+            out.append(b - w + int(np.argmin(seg)))
+        return out + [L]
+    al = a[..., 3] > 0; YC = cuts(al.sum(1), rows, H); XC = cuts(al.sum(0), cols, W)
     grid = []
     for r in range(rows):
         row = []
         for c in range(cols):
-            cell = a[int(r * H / rows):int((r + 1) * H / rows), int(c * W / cols):int((c + 1) * W / cols)]
+            cell = a[YC[r]:YC[r + 1], XC[c]:XC[c + 1]]
             ys, xs = np.nonzero(cell[..., 3]); row.append(cell[ys.min():ys.max() + 1, xs.min():xs.max() + 1])
         grid.append(row)
     return grid
