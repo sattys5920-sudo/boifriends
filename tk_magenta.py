@@ -21,6 +21,10 @@ def key(a):
         edge = fg & ~ndimage.binary_erosion(fg)
         tint = (np.minimum(R, B) - G > 50) & (np.minimum(R, B) > 140)   # 라벤더 머리처럼 연한 보라는 남겨요
         fg &= ~(edge & tint)
+    # 배경 근처에 남은 분홍기 빼기(despill): R·B가 G보다 넘치는 만큼 깎아요
+    near = ndimage.binary_dilation(~fg, iterations=3) & fg
+    ex = np.clip(np.minimum(R, B) - G, 0, None) * near
+    rgb = rgb.copy(); rgb[..., 0] -= ex; rgb[..., 2] -= ex
     out = np.zeros(a.shape[:2] + (4,), np.uint8); out[..., :3] = rgb; out[..., 3] = np.where(fg, 255, 0)
     return out
 
