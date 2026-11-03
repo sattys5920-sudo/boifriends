@@ -39,19 +39,19 @@ def skin(f):
 def measure(f):
     """[얼굴 폭, 몸통 폭, 턱 위치, 키] — 얼굴 폭은 피부가 가장 넓은 줄, 몸통 폭은 턱 아래 30% 지점"""
     t, b, l, r = bbox(f); f = f[t:b, l:r]; h = f.shape[0]; c = chin(f); sk = skin(f[:c])
-    fw = int(sk.sum(1).max()) if sk.any() else int((f[:c, :, 3] > 0).any(0).sum() * .7)
+    ey = int(h * .27); seg = f[max(0, ey - 2):ey + 3, :, 3] > 0   # 눈 높이에서 머리 전체 폭 (금발·헬멧도 그대로 재요)
+    cols = np.nonzero(seg.any(0))[0]; fw = int(cols.max() - cols.min() + 1) if len(cols) else f.shape[1]
     y = min(h - 1, c + int((h - c) * .3)); row = np.nonzero(f[y, :, 3] > 0)[0]
     tw = int(row.max() - row.min() + 1) if len(row) else f.shape[1]
     return fw, tw, c, h
 
 def scales(gf, bf):
     gfw, gtw, gc, gh = measure(gf); bfw, btw, bc, bh = measure(bf)
-    sh = np.clip(bfw * .95 / max(gfw, 1), .95, 1.3)          # 얼굴을 짝 남자애 얼굴 크기만큼
-    sh = min(sh, max(.95, bc * 1.0 / max(gc, 1)))              # 머리 높이는 짝 남자애 머리보다 크지 않게
+    sh = np.clip(bfw / max(gfw, 1), .8, 1.5)                 # 머리 폭을 짝 남자애와 똑같이
     Ht = bh * .95
     sbh = np.clip((Ht - gc * sh) / max(gh - gc, 1), .75, 1.1)  # 남은 키가 몸 (너무 짧아지지 않게)
     tot = gc * sh + (gh - gc) * sbh
-    if tot > Ht * 1.02: k = Ht / tot; sh *= k; sbh *= k        # 전체 키가 넘치면 같이 줄여요
+    if tot > Ht * 1.02: sbh = max(.6, (Ht - gc * sh) / max(gh - gc, 1))   # 키가 넘치면 몸만 줄여요 (얼굴 크기는 지켜요)
     sbw = np.clip(btw * .9 / max(gtw, 1), 1.0, 1.4)           # 몸통 폭을 짝 남자애 어깨만큼 넓게
     return sh, sbh, sbw, gc / gh
 
