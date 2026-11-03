@@ -33,6 +33,10 @@ function addLove(o, n) { if (!o.lv || o.lv.day !== today()) o.lv = { day: today(
 let CH = [], CHM = {}, TALK = {}, FR = {}, IT = [], ITM = {}, MUM = {}, CTRY = [], TRV = {}, GL = [], GLM = {};
 // 짝: 도감 25명을 다 모으면 열려요. 여자애는 방 하나에 한 명씩, 남자친구와 같이 행동해요
 const allMet = () => CH.length && CH.every(c => S.owned[c.id]);
+const hisCall = g => S.girls[g].bc || nameOf(g);   // 남자애가 여자애를 부르는 이름
+const herCall = g => S.girls[g].gc || nameOf(S.girls[g].with);   // 여자애가 남자애를 부르는 이름
+const BOY_HEART = ['{her}.', '{her}, 이리 와.', '{her}, 오늘 좀 예쁘네.', '....{her}, 좋아해.'], BOY_FIGHT = ['{her}, 왜 그래?', '....{her}, 내가 뭘 했는데.', '{her}, 미안해.'];
+const withHim = (t, g) => Math.random() < .45 && !t.includes('{him}') ? `${herCall(g)}, ${t}` : t.split('{him}').join(herCall(g));
 const girlOf = boy => Object.keys(S.girls || {}).find(g => S.girls[g].with === boy);
 const sub = (t, o, place) => t.split('{call}').join(o?.call || '너').split('{place}').join(place || '');
 // 혼잣말: 지금 상태에 맞는 묶음에서, 다 쓸 때까지 겹치지 않게 섞어서 꺼내요
@@ -211,12 +215,13 @@ function openPanel(k, extra) { panel = Object.assign({ k }, extra || {}); render
 function closePanel() { if (!Object.keys(S.owned).length) return; panel = null; document.querySelector('.sheet')?.remove(); render(); }
 function renderPanel() {
   document.querySelector('.sheet')?.remove();
-  const f = { travel: pTravel, who: pWho, profile: pProfile, decor: pDecor, gacha: pGacha, pair: pPair, place: pPlace, dex: pDex, menu: pMenu, give: pGive, job: pJob, mail: pMail }[panel.k];
+  const f = { travel: pTravel, who: pWho, profile: pProfile, decor: pDecor, gacha: pGacha, pair: pPair, place: pPlace, names: pNames, dex: pDex, menu: pMenu, give: pGive, job: pJob, mail: pMail }[panel.k];
   const [title, body] = f();
   const el = document.createElement('div'); el.className = 'sheet';
   el.innerHTML = `<div class="panel" role="dialog" aria-label="${esc(title)}"><div class="phead"><h2>${esc(title)}</h2>${Object.keys(S.owned).length ? '<button class="close" data-act="close" aria-label="닫기"><img src="assets/ui/ic_back.png" alt=""></button>' : `<span class="pill coin"><img src="assets/ui/ic_coin.png" alt="">${S.coins}</span>`}</div><div class="pbody">${body}</div></div>`;
   el.addEventListener('click', e => { if (e.target === el) closePanel(); });
   document.body.appendChild(el);
+  if (panel.k === 'names') { const f3 = el.querySelector('#namef'); f3.onsubmit = ev => { ev.preventDefault(); const h = S.girls[panel.g]; h.bc = el.querySelector('#bc').value.trim(); h.gc = el.querySelector('#gc').value.trim(); save(); toast('저장했어요.'); GA.sayT = withHim(pick(GLM[panel.g].heart), panel.g); GA.sayUntil = anim.tick + 20; GA.heart = 14; closePanel(); }; }
   if (panel.k === 'profile') { const f2 = el.querySelector('#callf'); if (f2) f2.onsubmit = ev => { ev.preventDefault(); const o = S.owned[cur()]; o.call = el.querySelector('#call').value.trim() || '너'; const hn = el.querySelector('#hname'); if (hn) o.name = hn.value.trim() || '???'; save(); toast('저장했어요.'); render(); }; }
 }
 function pWho() {
@@ -227,7 +232,7 @@ function pWho() {
 function pProfile() {
   const id = cur(), o = S.owned[id], c = CHM[id];
   return [`프로필`, `<div class="card" style="padding:0;overflow:hidden"><div style="height:170px;position:relative;background:#bfe6ff;border-bottom:3px solid var(--ink)"><div style="position:absolute;left:50%;margin-left:-60px;bottom:4px;width:120px;height:165px;overflow:hidden">${face(id, 120)}</div></div>
-      <div style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div style="font-size:16px;font-weight:700">${esc(nameOf(id))}</div><div class="label">오늘 기분 · ${moodOf(id)}<br>상태 · ${stateOf(o)}${girlOf(id) ? `<br>짝 · ${esc(nameOf(girlOf(id)))}` : ''}</div></div><span class="pill">${stageOf(o.love)[0]} · ${o.love}</span></div></div>
+      <div style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div style="font-size:16px;font-weight:700">${esc(nameOf(id))}</div><div class="label">오늘 기분 · ${moodOf(id)}<br>상태 · ${stateOf(o)}${girlOf(id) ? `<br>짝 · ${esc(nameOf(girlOf(id)))} <button class="pill" data-act="gnames" data-v="${girlOf(id)}" style="font-size:10px;padding:1px 6px">부르는 이름</button>` : ''}</div></div><span class="pill">${stageOf(o.love)[0]} · ${o.love}</span></div></div>
     <form id="callf" class="card" style="display:flex;flex-direction:column;gap:6px">
       ${id === 'hidden' ? `<label class="label" for="hname">이 사람의 이름</label><input class="field" id="hname" maxlength="8" value="${esc(o.name || '')}" placeholder="이름을 지어 주세요">` : ''}
       <label class="label" for="call">나를 부르는 이름</label><div style="display:flex;gap:8px"><input class="field" id="call" maxlength="8" value="${esc(o.call)}"><button class="btn" type="submit">저장</button></div></form>
@@ -278,7 +283,17 @@ function pPair() {
     ${mine.map(g => { const w = S.girls[g].with; return `<div class="card" style="display:flex;align-items:center;gap:10px">
       <span style="width:40px;height:40px;border:2px solid var(--ink);border-radius:10px;overflow:hidden;position:relative;background:#ffd9e6;flex-shrink:0">${face(g, 40)}</span>
       <span style="flex:1;font-size:12px;line-height:1.5"><b>${esc(nameOf(g))}</b><br>${w ? `${esc(nameOf(w))}의 방` : '아직 방이 없어요'}</span>
-      <button class="btn white" data-act="gplace" data-v="${g}" style="padding:6px 10px;font-size:12px">${w ? '방 바꾸기' : '방 고르기'}</button></div>`; }).join('')}`];
+      <span style="display:flex;flex-direction:column;gap:4px"><button class="btn white" data-act="gplace" data-v="${g}" style="padding:6px 10px;font-size:12px">${w ? '방 바꾸기' : '방 고르기'}</button>${w ? `<button class="btn white" data-act="gnames" data-v="${g}" style="padding:6px 10px;font-size:12px">부르는 이름</button>` : ''}</span></div>`; }).join('')}`];
+}
+function pNames() {
+  const g = panel.g, b = S.girls[g].with;
+  return ['서로 부르는 이름', `<div class="card" style="display:flex;align-items:center;justify-content:center;gap:14px">
+      <span style="width:48px;height:48px;border:2px solid var(--ink);border-radius:10px;overflow:hidden;position:relative;background:#bfe6ff">${face(b, 48)}</span><b style="color:#e0457b">♥</b>
+      <span style="width:48px;height:48px;border:2px solid var(--ink);border-radius:10px;overflow:hidden;position:relative;background:#ffd9e6">${face(g, 48)}</span></div>
+    <form id="namef" class="card" style="display:flex;flex-direction:column;gap:6px">
+      <label class="label" for="bc">${esc(nameOf(b))} → ${esc(nameOf(g))}</label><input class="field" id="bc" maxlength="8" value="${esc(S.girls[g].bc || '')}" placeholder="${esc(nameOf(g))}">
+      <label class="label" for="gc">${esc(nameOf(g))} → ${esc(nameOf(b))}</label><input class="field" id="gc" maxlength="8" value="${esc(S.girls[g].gc || '')}" placeholder="${esc(nameOf(b))}">
+      <button class="btn yellow" type="submit">저장</button></form>`];
 }
 function pPlace() {
   const g = panel.g;
@@ -315,7 +330,7 @@ function give(k) {
   else { addLove(o, 1); msg = `(${it.n}, 고마워)`; }
   sayText = msg; panel = null; document.querySelector('.sheet')?.remove(); if (it.t === 'food') girlEat(id); save(); render();
 }
-function girlEat(id) { const g = girlOf(id); if (!g) return; GA.heart = 12; GA.sayT = pick(GLM[g].eat); GA.sayUntil = anim.tick + 18; }
+function girlEat(id) { const g = girlOf(id); if (!g) return; GA.heart = 12; GA.sayT = withHim(pick(GLM[g].eat), g); GA.sayUntil = anim.tick + 18; }
 function pJob() {
   const id = cur(), o = S.owned[id];
   if (o.job) return ['알바', `<div class="card" style="text-align:center;line-height:1.8"><img src="assets/ui/ic_job.png" alt="" style="width:32px"><br><b>${esc(JOB_NAME[id])}</b><br>${timeLeft(o.job.until)} · +${o.job.pay} 코인</div>`];
@@ -340,7 +355,7 @@ function startTrip(k) {
   S.coins -= c.p; save(); panel = null; document.querySelector('.sheet')?.remove();
   const tg = girlOf(id);
   const lines = [...(TRV[id] || [])].sort(() => Math.random() - .5).slice(0, 3).map(l => l.split('{place}').join(c.n).split('{call}').join(o.call || '너'));
-  if (tg) lines[1] = `${nameOf(tg)}: ${sub(pick(GLM[tg].trip), o, c.n)}`;
+  if (tg) lines[1] = `${nameOf(tg)}: ${withHim(sub(pick(GLM[tg].trip), o, c.n), tg)}`;
   const n = (FR[id] || [4, 4, 4, 4])[3], el = document.createElement('div'); el.className = 'tripview';
   el.innerHTML = `<div class="tsay"> </div><div class="tstage" style="background-image:url(assets/travel/${k}.png?v=2)"><div class="tplace">${esc(c.n)}</div>
     <div class="twalker"><img class="px" src="assets/ch/${id}.webp?v=17" alt=""></div>${tg ? `<div class="twalker tgirl"><img class="px" src="assets/ch/${tg}.webp?v=17" alt=""></div>` : ''}<span class="emo tjoy">♪</span></div>
@@ -460,7 +475,8 @@ document.addEventListener('click', e => {
   if (a === 'pair') return openPanel('pair');
   if (a === 'gpull') return gpull();
   if (a === 'gplace') return openPanel('place', { g: v });
-  if (a === 'gput') { const g = panel.g; S.girls[g].with = v; S.cur = v; save(); panel = null; document.querySelector('.sheet')?.remove(); sayText = null; GA.x = -anim.x || 0.4; GA.sayT = GLM[g].hello; GA.sayUntil = anim.tick + 22; GA.heart = 14; return render(); }
+  if (a === 'gput') { const g = panel.g; S.girls[g].with = v; S.cur = v; save(); panel = null; document.querySelector('.sheet')?.remove(); sayText = null; GA.x = -anim.x || 0.4; GA.sayT = withHim(GLM[g].hello, g); GA.sayUntil = anim.tick + 22; GA.heart = 14; render(); return openPanel('names', { g }); }
+  if (a === 'gnames') return openPanel('names', { g: v });
   if (a === 'coin') { const n = 10 + Math.floor(Math.random() * 21); S.coins += n; b.remove(); dropStyle = null; toast(`+${n} 코인`); save(); document.querySelector('.pill.coin').lastChild.textContent = S.coins.toLocaleString('ko-KR'); return; }
   if (a === 'dtab') { panel.tab = v; panel.pv = null; return renderPanel(); }
   if (a === 'dcancel') { panel.pv = null; return renderPanel(); }
@@ -516,9 +532,9 @@ function pairStep(id, o, g) {
   if (G.next && T >= G.next.at) { G.sayT = G.next.t; G.sayUntil = T + 20; if (G.next.fx === 'heart') G.heart = 14; G.next = null; }
   if (T % 60 !== 0) return;
   const r = Math.random(), side = A.x > 0 ? -1 : 1, meet = () => { G.x = Math.max(-0.9, Math.min(0.9, A.x + side * 0.62)); A.mode = G.mode = 'idle'; A.t = G.t = 26; };
-  if (r < .5) { A.mumT = mumbleOf(id, o); A.mumUntil = T + 16; G.next = { at: T + 14, t: pick(gl.react) }; }
-  else if (r < .8) { meet(); A.face = side > 0 ? 3 : 2; G.face = side > 0 ? 2 : 3; A.heart = 18; G.heart = 18; G.sayT = pick(gl.heart); G.sayUntil = T + 22; o.fun = clamp(o.fun + 2); }
-  else { meet(); A.face = side > 0 ? 2 : 3; G.face = side > 0 ? 3 : 2; A.angry = 16; G.angry = 18; G.sayT = pick(gl.fight); G.sayUntil = T + 20; G.next = { at: T + 34, t: pick(gl.makeup), fx: 'heart' }; }
+  if (r < .5) { A.mumT = mumbleOf(id, o); A.mumUntil = T + 16; G.next = { at: T + 14, t: withHim(pick(gl.react), g) }; }
+  else if (r < .8) { meet(); A.face = side > 0 ? 3 : 2; G.face = side > 0 ? 2 : 3; A.heart = 18; G.heart = 18; A.mumT = pick(BOY_HEART).split('{her}').join(hisCall(g)); A.mumUntil = T + 12; G.next = { at: T + 12, t: withHim(pick(gl.heart), g), fx: 'heart' }; o.fun = clamp(o.fun + 2); }
+  else { meet(); A.face = side > 0 ? 2 : 3; G.face = side > 0 ? 3 : 2; A.angry = 16; G.angry = 18; G.sayT = pick(gl.fight); G.sayUntil = T + 20; A.mumT = pick(BOY_FIGHT).split('{her}').join(hisCall(g)); A.mumUntil = T + 34; G.next = { at: T + 36, t: withHim(pick(gl.makeup), g), fx: 'heart' }; }
 }
 function paintGirl(id, o) {
   const man = $('#gman'); if (!man) return;
