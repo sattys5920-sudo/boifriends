@@ -30,8 +30,8 @@ def key(a):
     mag |= (np.minimum(R, B) - G > 45) & (np.abs(R - B) < 60) & (B > 90)   # 다리 사이에 낀 어두운 마젠타
     fg = ~mag
     dk = rgb.max(2) < 90   # 칸을 나누는 검은 격자선(가로·세로로 길게 이어진 선)은 배경으로
-    for y in np.where(dk.mean(1) > .6)[0]: fg[max(0, y - 1):y + 2, :] = False
-    for x in np.where(dk.mean(0) > .6)[0]: fg[:, max(0, x - 1):x + 2] = False
+    for y in np.where(dk.mean(1) > .9)[0]: fg[max(0, y - 1):y + 2, :] = False
+    for x in np.where(dk.mean(0) > .9)[0]: fg[:, max(0, x - 1):x + 2] = False
     lab, n = ndimage.label(fg)
     if n > 1:   # 작은 부스러기 버리기
         sz = ndimage.sum(fg, lab, range(1, n + 1)); fg &= np.isin(lab, 1 + np.where(sz >= max(40, sz.max() * .02))[0])
