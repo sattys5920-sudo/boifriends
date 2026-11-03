@@ -233,6 +233,8 @@ async function enter() { await loadSave(); tickTime(); save(); sayText = null; r
 function openPanel(k, extra) { panel = Object.assign({ k }, extra || {}); renderPanel(); }
 function closePanel() { if (!Object.keys(S.owned).length) return; panel = null; document.querySelector('.sheet')?.remove(); render(); }
 function renderPanel() {
+  const old = document.querySelector('.sheet .pbody'), keep = old && renderPanel.k === panel.k ? old.scrollTop : 0;   // 같은 창을 다시 그릴 때는 스크롤 위치를 지켜요
+  renderPanel.k = panel.k;
   document.querySelector('.sheet')?.remove();
   const f = { travel: pTravel, who: pWho, profile: pProfile, decor: pDecor, gacha: pGacha, pair: pPair, place: pPlace, names: pNames, dex: pDex, menu: pMenu, give: pGive, job: pJob, mail: pMail }[panel.k];
   const [title, body] = f();
@@ -240,6 +242,7 @@ function renderPanel() {
   el.innerHTML = `<div class="panel" role="dialog" aria-label="${esc(title)}"><div class="phead"><h2>${esc(title)}</h2>${Object.keys(S.owned).length ? '<button class="close" data-act="close" aria-label="닫기"><img src="assets/ui/ic_back.png" alt=""></button>' : `<span class="pill coin"><img src="assets/ui/ic_coin.png" alt="">${S.coins}</span>`}</div><div class="pbody">${body}</div></div>`;
   el.addEventListener('click', e => { if (e.target === el) closePanel(); });
   document.body.appendChild(el);
+  if (keep) el.querySelector('.pbody').scrollTop = keep;
   if (panel.k === 'names') { const f3 = el.querySelector('#namef'); f3.onsubmit = ev => { ev.preventDefault(); const h = S.girls[panel.g]; h.bc = el.querySelector('#bc').value.trim(); h.gc = el.querySelector('#gc').value.trim(); save(); toast('저장했어요.'); GA.sayT = withHim(pick(GLX(panel.g).heart), panel.g); GA.sayUntil = anim.tick + 20; GA.heart = 14; closePanel(); }; }
   if (panel.k === 'profile') { const f2 = el.querySelector('#callf'); if (f2) f2.onsubmit = ev => { ev.preventDefault(); const o = S.owned[cur()]; o.call = el.querySelector('#call').value.trim() || '너'; const hn = el.querySelector('#hname'); if (hn) o.name = hn.value.trim() || '???'; save(); toast('저장했어요.'); render(); }; }
 }
@@ -600,7 +603,7 @@ setInterval(() => { if (S && user) { tickTime(); save(); } }, 60000);
 // ---------- 시작 ----------
 (async () => {
   app.innerHTML = '<div class="start"><div class="egg"><div class="scr"></div></div><div class="note">불러오는 중....</div></div>';
-  const [c, t, f, it, mu, ct, tv, gl, sts] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json', 'data/sets.json'].map(u => fetch(u + '?v=81').then(r => r.ok ? r.json() : {})));
+  const [c, t, f, it, mu, ct, tv, gl, sts] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json', 'data/sets.json'].map(u => fetch(u + '?v=82').then(r => r.ok ? r.json() : {})));
   CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x])); MUM = mu; CTRY = ct; TRV = tv; GL = Array.isArray(gl) ? gl : []; SETS = Array.isArray(sts) ? sts : []; GLM = Object.fromEntries(GL.map(x => [x.id, x]));
   try { await initFirebase(); } catch (e) { console.warn('Firebase 연결 실패, 기기 저장으로', e); fb = null; }
   if (fb) {
