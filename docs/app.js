@@ -39,7 +39,13 @@ const BOY_HEART = ['{her}.', '{her}, 이리 와.', '{her}, 오늘 좀 예쁘네.
 // 원작 커플 전용 대사(pair)는 절반쯤 섞여 나오고, 앞에 부르는 이름을 붙이지 않아요
 const boyLine = (g, boy, k, def) => { const sp = GLM[g].pair && GLM[g].pair[boy] && GLM[g].pair[boy]['boy_' + k]; return (sp && Math.random() < .6 ? pick(sp) : pick(def)).split('{her}').join(hisCall(g)); };
 const lineOf = (gl, boy, k) => { const sp = gl.pair && gl.pair[boy] && gl.pair[boy][k]; return sp && Math.random() < .5 ? '\u0001' + pick(sp) : pick(gl[k]); };
-const withHim = (t, g) => t[0] === '\u0001' ? t.slice(1) : Math.random() < .45 && !t.includes('{him}') ? `${herCall(g)}, ${t}` : t.split('{him}').join(herCall(g));
+const withHim = (t, g) => {
+  if (t[0] === '\u0001') return t.slice(1);
+  if (t.includes('{him}')) return t.split('{him}').join(herCall(g));
+  if (t[0] === '(' || Math.random() >= .45) return t;   // 말 없이 행동만 하는 줄은 이름을 안 붙여요
+  const tag = t.match(/^\[[^\]]+\] /);   // [PDA] 같은 머리말은 앞에 두고 그 뒤에 이름
+  return tag ? `${tag[0]}${herCall(g)}, ${t.slice(tag[0].length)}` : `${herCall(g)}, ${t}`;
+};
 const girlOf = boy => Object.keys(S.girls || {}).find(g => S.girls[g].with === boy);
 const sub = (t, o, place) => t.split('{call}').join(o?.call || '너').split('{place}').join(place || '');
 // 혼잣말: 지금 상태에 맞는 묶음에서, 다 쓸 때까지 겹치지 않게 섞어서 꺼내요
@@ -572,7 +578,7 @@ setInterval(() => { if (S && user) { tickTime(); save(); } }, 60000);
 // ---------- 시작 ----------
 (async () => {
   app.innerHTML = '<div class="start"><div class="egg"><div class="scr"></div></div><div class="note">불러오는 중....</div></div>';
-  const [c, t, f, it, mu, ct, tv, gl] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json'].map(u => fetch(u + '?v=55').then(r => r.ok ? r.json() : {})));
+  const [c, t, f, it, mu, ct, tv, gl] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json'].map(u => fetch(u + '?v=56').then(r => r.ok ? r.json() : {})));
   CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x])); MUM = mu; CTRY = ct; TRV = tv; GL = Array.isArray(gl) ? gl : []; GLM = Object.fromEntries(GL.map(x => [x.id, x]));
   try { await initFirebase(); } catch (e) { console.warn('Firebase 연결 실패, 기기 저장으로', e); fb = null; }
   if (fb) {
