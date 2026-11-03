@@ -163,3 +163,6 @@ img,.px{image-rendering:pixelated;image-rendering:crisp-edges}
 .buybar{display:flex;align-items:center;gap:6px;background:var(--yellow2);border:3px solid var(--ink);border-radius:12px;padding:6px 8px;box-shadow:0 3px 0 var(--ink)}
 .buybar span{flex:1;min-width:0;font-size:12px}
 .buybar .btn{height:38px;font-size:12px;padding:0 10px}
+.gmum{top:auto;bottom:62%}
+.pill.pairbtn{background:var(--pink2,#ffd9e6);color:#b8336a;font-weight:700;cursor:pointer}
+.twalker.tgirl{margin-left:-96px;animation-delay:.2s}

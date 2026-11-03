@@ -30,7 +30,11 @@ const JOBS = [['30 분', 30, 40], ['3 시간', 180, 150], ['8 시간', 480, 350]
 const DROP_MS = 5 * 60 * 1000;
 const GACHA = 300, DUP = 150, TALK_MAX = 3, LOVE_DAY = 4;   // 애정은 하루 최대 4 → 한 단계(25)에 약 일주일
 function addLove(o, n) { if (!o.lv || o.lv.day !== today()) o.lv = { day: today(), g: 0 }; const g = Math.max(0, Math.min(n, LOVE_DAY - o.lv.g)); const before = stageOf(o.love); o.lv.g += g; o.love = clamp(o.love + g); if (stageOf(o.love) !== before) { S.coins += 100; setTimeout(() => toast(`${stageOf(o.love)[0]}이(가) 됐어요! +100 코인`), 50); } return g; }
-let CH = [], CHM = {}, TALK = {}, FR = {}, IT = [], ITM = {}, MUM = {}, CTRY = [], TRV = {};
+let CH = [], CHM = {}, TALK = {}, FR = {}, IT = [], ITM = {}, MUM = {}, CTRY = [], TRV = {}, GL = [], GLM = {};
+// 짝: 도감 25명을 다 모으면 열려요. 여자애는 방 하나에 한 명씩, 남자친구와 같이 행동해요
+const allMet = () => CH.length && CH.every(c => S.owned[c.id]);
+const girlOf = boy => Object.keys(S.girls || {}).find(g => S.girls[g].with === boy);
+const sub = (t, o, place) => t.split('{call}').join(o?.call || '너').split('{place}').join(place || '');
 // 혼잣말: 지금 상태에 맞는 묶음에서, 다 쓸 때까지 겹치지 않게 섞어서 꺼내요
 const BAG = {};
 function mumbleOf(id, o) {
@@ -105,28 +109,29 @@ function tickTime() {
 // ---------- 화면 ----------
 let panel = null, anim = { x: 0, dir: 1, mode: 'walk', t: 20, f: 0, mum: -1, heart: 0, tick: 0 }, sayText = null;
 const cur = () => S.cur && S.owned[S.cur] ? S.cur : Object.keys(S.owned)[0];
-const nameOf = id => id === 'hidden' ? (S.owned.hidden?.name || '???') : CHM[id].name;
+const nameOf = id => id === 'hidden' ? (S.owned.hidden?.name || '???') : GLM[id] ? GLM[id].name : CHM[id].name;
 
 const timeLeft = t => { const m = Math.max(0, Math.ceil((t - Date.now()) / 60000)); return m >= 60 ? `${Math.floor(m / 60)} 시간 ${m % 60} 분 남음` : `${m} 분 남음`; };
 const wakeAt = o => Date.now() + Math.max(0, 100 - (o.energy + 14 * (Date.now() - S.last) / 3.6e6)) / 14 * 3.6e6;
 const tileUrl = (cat, k) => k === 'plain' ? 'none' : `url(assets/decor/${cat}_${k}.png)`;
 const slot = (cat, v, pos) => v ? spr(cat, v[0], v[1], 2).replace('POS', pos) : '';
 // 잠: 침대에 뒷모습으로 눕히고 이불 덮기 (침대가 없으면 바닥에 이불)
-function sleepHTML(id, r) {
+function sleepHTML(id, r, dy) {
   const pos = r.a && r.a[0] === 'bed' ? 'left:3%;bottom:20%' : r.b && r.b[0] === 'bed' ? 'right:3%;bottom:20%' : 'left:calc(50% - 44px);bottom:6%';
   const s = 36 / 96;
-  return `<div style="position:absolute;width:88px;height:56px;${pos};z-index:5"><div style="position:absolute;inset:0;filter:brightness(.22)">
+  return `<div style="position:absolute;width:88px;height:56px;${pos};z-index:${dy ? 4 : 5};${dy ? `transform:translate(12px,${dy}px)` : ''}"><div style="position:absolute;inset:0;filter:brightness(.22)">
     <div style="position:absolute;left:11px;top:1px;width:36px;height:50px;overflow:hidden;transform:rotate(-90deg)"><img class="px" src="assets/ch/${id}.webp?v=17" alt="" style="width:${384 * s}px;height:${528 * s}px;max-width:none;margin-top:${-132 * s}px"></div>
     <div style="position:absolute;left:19px;top:19px;width:67px;height:29px;border:2px solid var(--ink);border-radius:8px 6px 4px 4px;background:#8ccff5;background-image:repeating-linear-gradient(90deg,transparent 0 10px,rgba(255,255,255,.5) 10px 13px)"></div></div>
-    <span class="emo" style="left:8px;top:-22px;color:#5b6bd6">Z z z</span></div>`;
+    ${dy ? '' : '<span class="emo" style="left:8px;top:-22px;color:#5b6bd6">Z z z</span>'}</div>`;
 }
 function roomHTML(id, o, scale) {
-  const r = o.room;
+  const r = o.room, g = id ? girlOf(id) : null, hideG = o.sleeping || o.job ? 'style="display:none"' : '';
   return `<div class="room" style="background-color:${PAL[r.wc][1]};background-image:${tileUrl('wall', r.wp)}">
     <div class="floor" style="background-color:${PAL[r.fc][1]};background-image:${tileUrl('floor', r.fl)}"></div>
     ${slot('deco', r.dc, 'left:6%;top:6%')}${slot('furn', r.a, 'left:3%;bottom:20%')}${slot('furn', r.b, 'right:3%;bottom:20%')}${slot('prop', r.pr, 'left:28%;bottom:4%;z-index:2')}
-    ${id && o.sleeping ? sleepHTML(id, r) : ''}${id && o.job ? `<div style="position:absolute;left:50%;top:38%;transform:translateX(-50%);z-index:5;background:#fff;border:3px solid var(--ink);border-radius:10px;padding:6px 10px;font-size:11px;text-align:center;line-height:1.5"><img src="assets/ui/ic_job.png" alt="" style="width:18px;vertical-align:-4px"> ${esc(JOB_NAME[id])} 알바 중<br><b id="jobleft">${timeLeft(o.job.until)}</b></div>` : ''}
+    ${id && o.sleeping && g ? sleepHTML(g, r, -16) : ''}${id && o.sleeping ? sleepHTML(id, r) : ''}${id && o.job ? `<div style="position:absolute;left:50%;top:38%;transform:translateX(-50%);z-index:5;background:#fff;border:3px solid var(--ink);border-radius:10px;padding:6px 10px;font-size:11px;text-align:center;line-height:1.5"><img src="assets/ui/ic_job.png" alt="" style="width:18px;vertical-align:-4px"> ${esc(JOB_NAME[id])} 알바 중${g ? `<br><small>${esc(nameOf(g))}도 같이</small>` : ''}<br><b id="jobleft">${timeLeft(o.job.until)}</b></div>` : ''}
     ${id ? `<div class="shadow" id="shd" ${o.sleeping || o.job ? 'style="display:none"' : ''}></div><div class="man" id="man" ${o.sleeping || o.job ? 'style="display:none"' : ''}><img class="px" src="assets/ch/${id}.webp?v=17" alt="${esc(nameOf(id))}"></div><span class="emo" id="emo" hidden></span><span class="mumble" id="mum" hidden></span>` : ''}
+    ${g ? `<div class="shadow" id="gshd" ${hideG}></div><div class="man" id="gman" ${hideG}><img class="px" src="assets/ch/${g}.webp?v=17" alt="${esc(nameOf(g))}"></div><span class="emo" id="gemo" hidden></span><span class="mumble gmum" id="gmum" hidden></span>` : ''}
     ${o.sleeping ? `<div class="night"></div><div class="sleepleft">쿨쿨 · 일어나기까지 <b id="sleepleft">${timeLeft(wakeAt(o)).replace(' 남음', '')}</b></div>` : ''}
   </div>`;
 }
@@ -148,7 +153,7 @@ function renderNow() {
   app.innerHTML = `<div class="shell">
     <div class="brand"><img src="assets/ui/ic_heart.png" alt="">YEONIGOTCHI</div>
     <div class="topbar"><button class="who" data-act="who" aria-label="돌볼 사람 바꾸기"><span class="face">${face(id, 32)}</span><span>${esc(nameOf(id))}</span><img src="assets/ui/ic_back.png" alt="" style="width:14px;transform:rotate(-90deg)"></button>
-      <span style="display:flex;gap:6px">${S.mail && S.mail.length ? `<button class="pill" data-act="mail" aria-label="편지 ${S.mail.length}통"><img src="assets/ui/ic_mail.png" alt="">${S.mail.length}</button>` : ''}<span class="pill coin"><img src="assets/ui/ic_coin.png" alt="">${S.coins.toLocaleString('ko-KR')}</span></span></div>
+      <span style="display:flex;gap:6px">${allMet() ? `<button class="pill pairbtn" data-act="pair" aria-label="짝 찾아 주기">♥ 짝</button>` : ''}${S.mail && S.mail.length ? `<button class="pill" data-act="mail" aria-label="편지 ${S.mail.length}통"><img src="assets/ui/ic_mail.png" alt="">${S.mail.length}</button>` : ''}<span class="pill coin"><img src="assets/ui/ic_coin.png" alt="">${S.coins.toLocaleString('ko-KR')}</span></span></div>
     <div class="icons">${ic('give', 'food', '주기')}${ic('play', 'play', '놀기')}${ic('wash', 'wash', '씻기')}${ic('sleep', 'sleep', o.sleeping ? '깨우기' : '재우기', o.sleeping)}${ic('talk', 'talk', '대화')}</div>
     <div class="lcd">${roomHTML(id, o)}</div>
     <div class="say"><b>${esc(nameOf(id))} · ${moodOf(id)} · ${stateOf(o)} <span>${'♥'.repeat(TALK_MAX - t)}</span></b><span id="say">${esc(sayText || defaultSay(id, o))}</span></div>
@@ -206,7 +211,7 @@ function openPanel(k, extra) { panel = Object.assign({ k }, extra || {}); render
 function closePanel() { if (!Object.keys(S.owned).length) return; panel = null; document.querySelector('.sheet')?.remove(); render(); }
 function renderPanel() {
   document.querySelector('.sheet')?.remove();
-  const f = { travel: pTravel, who: pWho, profile: pProfile, decor: pDecor, gacha: pGacha, dex: pDex, menu: pMenu, give: pGive, job: pJob, mail: pMail }[panel.k];
+  const f = { travel: pTravel, who: pWho, profile: pProfile, decor: pDecor, gacha: pGacha, pair: pPair, place: pPlace, dex: pDex, menu: pMenu, give: pGive, job: pJob, mail: pMail }[panel.k];
   const [title, body] = f();
   const el = document.createElement('div'); el.className = 'sheet';
   el.innerHTML = `<div class="panel" role="dialog" aria-label="${esc(title)}"><div class="phead"><h2>${esc(title)}</h2>${Object.keys(S.owned).length ? '<button class="close" data-act="close" aria-label="닫기"><img src="assets/ui/ic_back.png" alt=""></button>' : `<span class="pill coin"><img src="assets/ui/ic_coin.png" alt="">${S.coins}</span>`}</div><div class="pbody">${body}</div></div>`;
@@ -222,7 +227,7 @@ function pWho() {
 function pProfile() {
   const id = cur(), o = S.owned[id], c = CHM[id];
   return [`프로필`, `<div class="card" style="padding:0;overflow:hidden"><div style="height:170px;position:relative;background:#bfe6ff;border-bottom:3px solid var(--ink)"><div style="position:absolute;left:50%;margin-left:-60px;bottom:4px;width:120px;height:165px;overflow:hidden">${face(id, 120)}</div></div>
-      <div style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div style="font-size:16px;font-weight:700">${esc(nameOf(id))}</div><div class="label">오늘 기분 · ${moodOf(id)}<br>상태 · ${stateOf(o)}</div></div><span class="pill">${stageOf(o.love)[0]} · ${o.love}</span></div></div>
+      <div style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div style="font-size:16px;font-weight:700">${esc(nameOf(id))}</div><div class="label">오늘 기분 · ${moodOf(id)}<br>상태 · ${stateOf(o)}${girlOf(id) ? `<br>짝 · ${esc(nameOf(girlOf(id)))}` : ''}</div></div><span class="pill">${stageOf(o.love)[0]} · ${o.love}</span></div></div>
     <form id="callf" class="card" style="display:flex;flex-direction:column;gap:6px">
       ${id === 'hidden' ? `<label class="label" for="hname">이 사람의 이름</label><input class="field" id="hname" maxlength="8" value="${esc(o.name || '')}" placeholder="이름을 지어 주세요">` : ''}
       <label class="label" for="call">나를 부르는 이름</label><div style="display:flex;gap:8px"><input class="field" id="call" maxlength="8" value="${esc(o.call)}"><button class="btn" type="submit">저장</button></div></form>
@@ -264,10 +269,29 @@ function pGacha() {
     <div class="machine" id="machine"><img class="m px" src="assets/ui/machine.png" alt="가챠 기계"><button class="knob" data-act="pull" aria-label="손잡이 돌리기"></button></div>
     <button class="btn yellow" data-act="pull" ${S.coins < GACHA ? 'disabled' : ''}><img src="assets/ui/ic_coin.png" alt="" style="width:16px;vertical-align:-3px"> ${GACHA}</button>`];
 }
+function pPair() {
+  const mine = Object.keys(S.girls || {});
+  return ['짝 찾아 주기', `
+    <div class="machine pairm" id="machine"><img class="m px" src="assets/ui/machine.png" alt="가챠 기계"><button class="knob" data-act="gpull" aria-label="손잡이 돌리기"></button></div>
+    <button class="btn yellow" data-act="gpull" ${S.coins < GACHA ? 'disabled' : ''}><img src="assets/ui/ic_coin.png" alt="" style="width:16px;vertical-align:-3px"> ${GACHA}</button>
+    <div class="card"><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700"><span>만난 여자애</span><span>${mine.length} / ${GL.length}</span></div></div>
+    ${mine.map(g => { const w = S.girls[g].with; return `<div class="card" style="display:flex;align-items:center;gap:10px">
+      <span style="width:40px;height:40px;border:2px solid var(--ink);border-radius:10px;overflow:hidden;position:relative;background:#ffd9e6;flex-shrink:0">${face(g, 40)}</span>
+      <span style="flex:1;font-size:12px;line-height:1.5"><b>${esc(nameOf(g))}</b><br>${w ? `${esc(nameOf(w))}의 방` : '아직 방이 없어요'}</span>
+      <button class="btn white" data-act="gplace" data-v="${g}" style="padding:6px 10px;font-size:12px">${w ? '방 바꾸기' : '방 고르기'}</button></div>`; }).join('')}`];
+}
+function pPlace() {
+  const g = panel.g;
+  return [`${nameOf(g)} · 방 고르기`, `<div class="card" style="font-size:12px;text-align:center">같이 지낼 방을 골라요. 한 방에 한 명씩만 들어가요.</div>` + Object.keys(S.owned).map(id => { const h = girlOf(id), mine = h === g, busy = h && !mine; return `<button class="card" data-act="${busy ? '' : 'gput'}" data-v="${id}" ${busy ? 'disabled' : ''} style="display:flex;align-items:center;gap:10px;text-align:left;${mine ? 'background:var(--yellow2)' : ''}${busy ? 'opacity:.45' : ''}">
+    <span style="width:40px;height:40px;border:2px solid var(--ink);border-radius:10px;overflow:hidden;position:relative;background:#bfe6ff;flex-shrink:0">${face(id, 40)}</span>
+    <span style="flex:1;font-weight:700;font-size:13px">${esc(nameOf(id))}</span><span class="label">${mine ? '지금 방' : busy ? '짝 있음' : ''}</span></button>`; }).join('')];
+}
 function pDex() {
   const all = CH, met = all.filter(c => S.owned[c.id]).length;
   return ['도감', `<div class="card"><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700"><span>만난 사람</span><span>${met} / ${all.length}</span></div><div class="bar" style="margin-top:6px"><i style="width:${met / all.length * 100}%;background-color:var(--mint)"></i></div></div>
-    <div class="grid4">${all.map(c => { const o = S.owned[c.id]; return `<div class="tile"><div class="pic">${o ? `<div class="one">${face(c.id, 66)}</div>` : '<div class="sil"><i class="h"></i><i class="bd">?</i></div>'}</div><span class="nm" style="color:${o ? 'inherit' : 'var(--ink2)'}">${o ? esc(nameOf(c.id)) : '???'}</span></div>`; }).join('')}</div>`];
+    <div class="grid4">${all.map(c => { const o = S.owned[c.id]; return `<div class="tile"><div class="pic">${o ? `<div class="one">${face(c.id, 66)}</div>` : '<div class="sil"><i class="h"></i><i class="bd">?</i></div>'}</div><span class="nm" style="color:${o ? 'inherit' : 'var(--ink2)'}">${o ? esc(nameOf(c.id)) : '???'}</span></div>`; }).join('')}</div>
+    ${allMet() ? `<div class="card"><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700"><span>짝</span><span>${Object.keys(S.girls || {}).length} / ${GL.length}</span></div></div>
+    <div class="grid4">${GL.map(c => { const h = (S.girls || {})[c.id]; return `<div class="tile"><div class="pic" style="background:#ffd9e6">${h ? `<div class="one">${face(c.id, 66)}</div>` : '<div class="sil"><i class="h"></i><i class="bd">?</i></div>'}</div><span class="nm" style="color:${h ? 'inherit' : 'var(--ink2)'}">${h ? esc(c.name) : '???'}</span></div>`; }).join('')}</div>` : ''}`];
 }
 function pGive() {
   const tab = panel.tab || 'food';
@@ -289,8 +313,9 @@ function give(k) {
   if (c.li.includes(k)) { addLove(o, 2); anim.heart = 16; if (!o.known.l.includes(k)) { o.known.l.push(k); S.coins += 30; } msg = `(${it.n}! 눈이 반짝였다 ♥)`; }
   else if (c.di.includes(k)) { o.love = clamp(o.love - 1); anim.angry = 16; if (!o.known.d.includes(k)) o.known.d.push(k); msg = `(${it.n}.... 표정이 굳었다)`; }
   else { addLove(o, 1); msg = `(${it.n}, 고마워)`; }
-  sayText = msg; panel = null; document.querySelector('.sheet')?.remove(); save(); render();
+  sayText = msg; panel = null; document.querySelector('.sheet')?.remove(); if (it.t === 'food') girlEat(id); save(); render();
 }
+function girlEat(id) { const g = girlOf(id); if (!g) return; GA.heart = 12; GA.sayT = pick(GLM[g].eat); GA.sayUntil = anim.tick + 18; }
 function pJob() {
   const id = cur(), o = S.owned[id];
   if (o.job) return ['알바', `<div class="card" style="text-align:center;line-height:1.8"><img src="assets/ui/ic_job.png" alt="" style="width:32px"><br><b>${esc(JOB_NAME[id])}</b><br>${timeLeft(o.job.until)} · +${o.job.pay} 코인</div>`];
@@ -313,17 +338,21 @@ function startTrip(k) {
   if (!c || o.job || o.sleeping) return;
   if (S.coins < c.p) return toast('코인이 부족해요.');
   S.coins -= c.p; save(); panel = null; document.querySelector('.sheet')?.remove();
+  const tg = girlOf(id);
   const lines = [...(TRV[id] || [])].sort(() => Math.random() - .5).slice(0, 3).map(l => l.split('{place}').join(c.n).split('{call}').join(o.call || '너'));
+  if (tg) lines[1] = `${nameOf(tg)}: ${sub(pick(GLM[tg].trip), o, c.n)}`;
   const n = (FR[id] || [4, 4, 4, 4])[3], el = document.createElement('div'); el.className = 'tripview';
   el.innerHTML = `<div class="tsay"> </div><div class="tstage" style="background-image:url(assets/travel/${k}.png?v=2)"><div class="tplace">${esc(c.n)}</div>
-    <div class="twalker"><img class="px" src="assets/ch/${id}.webp" alt=""></div><span class="emo tjoy">♪</span></div>
+    <div class="twalker"><img class="px" src="assets/ch/${id}.webp?v=17" alt=""></div>${tg ? `<div class="twalker tgirl"><img class="px" src="assets/ch/${tg}.webp?v=17" alt=""></div>` : ''}<span class="emo tjoy">♪</span></div>
     <div class="tbar"><i></i></div><button class="btn white tskip" data-tskip="1">바로 돌아오기</button>`;
   document.body.appendChild(el);
+  const gimg = el.querySelector('.tgirl img'), gn = tg ? (FR[tg] || [4, 4, 4, 4])[3] : 1;
   const img = el.querySelector('.twalker img'), say = el.querySelector('.tsay'), bar = el.querySelector('.tbar i'), joy = el.querySelector('.tjoy');
   const DUR = 21000, t0 = Date.now(); let f = 0, shown = -1;
   const tick = setInterval(() => {
     const t = Date.now() - t0; f++;
     img.style.marginLeft = -(f % n) * 66 + 'px'; img.style.marginTop = -3 * 91 + 'px';
+    if (gimg) { gimg.style.marginLeft = -((f + 1) % gn) * 66 + 'px'; gimg.style.marginTop = -3 * 91 + 'px'; }
     el.querySelector('.tstage').style.backgroundPositionX = -(t / 30) + 'px';
     bar.style.width = Math.min(100, t / DUR * 100) + '%';
     const i = Math.floor((t - 1500) / 6500);
@@ -350,7 +379,7 @@ function act(kind) {
   const say = t => { sayText = t; };
   if (o.job) { toast('알바 중이라 못 해요.'); return; }
   if (o.sleeping && kind !== 'sleep') { toast('자는 중이라 못 해요. 깨우려면 깨우기를 눌러요.'); return; }
-  if (kind === 'feed') { if (o.food >= 95) say('(배불러....)'); else { o.food = clamp(o.food + 25); addLove(o, 1); S.coins += 15; anim.heart = 10; say('(냠냠)'); } }
+  if (kind === 'feed') { if (o.food >= 95) say('(배불러....)'); else { o.food = clamp(o.food + 25); addLove(o, 1); S.coins += 15; anim.heart = 10; say('(냠냠)'); girlEat(id); } }
   if (kind === 'play') { if (o.energy < 15) say('(피곤해....)'); else { o.fun = clamp(o.fun + 22); o.energy = clamp(o.energy - 12); addLove(o, 1); S.coins += 15; anim.heart = 10; anim.mode = 'hop'; anim.t = 10; say('(신난다!)'); } }
   if (kind === 'wash') { if (o.clean >= 95) say('(반짝반짝)'); else { o.clean = clamp(o.clean + 35); S.coins += 10; say('(뽀득뽀득)'); } }
   if (kind === 'sleep') { o.sleeping = !o.sleeping; say(o.sleeping ? '(잘 자)' : '(좋은 아침)'); }
@@ -378,21 +407,33 @@ async function pull() {
   if (dup) S.coins += DUP;
   else { const c = CHM[got]; S.owned[got] = { love: 0, food: 70, fun: 60, clean: 80, energy: 80, call: '너', room: { wp: 'plain', wc: 1, fl: 'plain', fc: 8, a: ['bed', 0], b: null, dc: null, pr: null }, talk: { day: '', n: 0, i: -1 }, met: Date.now(), sleeping: false }; }
   S.cur = got; save(); pull.busy = false; reveal(got, dup);
+  if (!dup && allMet()) setTimeout(() => toast('도감을 다 모았어요! 이제 ♥ 짝 버튼으로 짝을 찾아 줄 수 있어요.'), 600);
+}
+async function gpull() {
+  if (S.coins < GACHA || pull.busy || !GL.length) return;
+  pull.busy = true; S.coins -= GACHA; S.girls = S.girls || {}; save();
+  $('#machine')?.classList.add('spin');
+  await new Promise(r => setTimeout(r, 1300));
+  const got = pick(GL).id, dup = !!S.girls[got];
+  if (dup) S.coins += DUP; else S.girls[got] = { with: null, met: Date.now() };
+  save(); pull.busy = false; reveal(got, dup);
 }
 function reveal(id, dup) {
-  const c = CHM[id], hid = id === 'hidden', el = document.createElement('div'); el.className = 'reveal';
-  el.innerHTML = `<div class="rcard"><div class="rstage ${hid ? 'hidden' : ''}"><img class="tw px" src="assets/ui/ic_star.png" alt="" style="left:22px;top:20px"><img class="tw px" src="assets/ui/ic_star.png" alt="" style="right:26px;top:44px">
+  const c = CHM[id] || GLM[id], girl = !!GLM[id], hid = id === 'hidden', el = document.createElement('div'); el.className = 'reveal';
+  el.innerHTML = `<div class="rcard"><div class="rstage ${hid ? 'hidden' : ''}" ${girl ? 'style="background:#ffd9e6"' : ''}><img class="tw px" src="assets/ui/ic_star.png" alt="" style="left:22px;top:20px"><img class="tw px" src="assets/ui/ic_star.png" alt="" style="right:26px;top:44px">
       <span class="badge" style="${dup ? 'background:#fff' : hid ? 'background:var(--yellow)' : ''}">${dup ? '또 만났다!' : hid ? 'HIDDEN ✦' : 'NEW!'}</span>
       <div style="width:120px;height:165px;margin-bottom:10px;overflow:hidden;position:relative">${face(id, 120)}</div></div>
     <div class="rbody"><div class="nm">${hid && !dup ? '???' : esc(nameOf(id))}</div><div style="font-size:13px;line-height:1.55">“${esc(c.gacha)}”</div>
       ${dup ? `<span class="pill coin"><img src="assets/ui/ic_coin.png" alt=""> +${DUP}</span>` : ''}
       ${hid && !dup ? `<label class="label" for="hn" style="align-self:flex-start">이 사람의 이름</label><input class="field" id="hn" maxlength="8" placeholder="이름을 지어 주세요">` : ''}
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%"><button class="btn white" data-r="again">한 번 더</button><button class="btn" data-r="go">방으로 가기</button></div></div></div>`;
+      ${girl && !dup ? `<button class="btn yellow" data-r="place" style="width:100%">같이 지낼 방 고르기</button>` : `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%"><button class="btn white" data-r="again">한 번 더</button><button class="btn" data-r="go">${girl ? '닫기' : '방으로 가기'}</button></div>`}</div></div>`;
   document.body.appendChild(el);
   el.onclick = e => {
     const b = e.target.closest('[data-r]'); if (!b) return;
     const hn = el.querySelector('#hn'); if (hn) { S.owned.hidden.name = hn.value.trim() || '???'; save(); }
     el.remove();
+    if (b.dataset.r === 'place') return openPanel('place', { g: id });
+    if (b.dataset.r === 'go' && girl) return renderPanel();
     if (b.dataset.r === 'go') { panel = null; document.querySelector('.sheet')?.remove(); sayText = null; render(); }
     else renderPanel();
   };
@@ -406,7 +447,7 @@ document.addEventListener('click', e => {
   if (a === 'prev' || a === 'next') { const ids = Object.keys(S.owned), i = ids.indexOf(cur()); S.cur = ids[(i + (a === 'next' ? 1 : ids.length - 1)) % ids.length]; sayText = null; save(); return render(); }
   if (['who', 'profile', 'decor', 'gacha', 'dex', 'menu', 'give', 'job', 'mail', 'travel'].includes(a)) return openPanel(a);
   if (a === 'gotrip') return startTrip(v);
-  if (a === 'dojob') { const o = S.owned[cur()], j = JOBS[+v]; o.job = { until: Date.now() + j[1] * 60000, pay: j[2] }; o.sleeping = false; save(); panel = null; document.querySelector('.sheet')?.remove(); sayText = '(다녀올게)'; return render(); }
+  if (a === 'dojob') { const o = S.owned[cur()], j = JOBS[+v]; o.job = { until: Date.now() + j[1] * 60000, pay: j[2] }; o.sleeping = false; save(); panel = null; document.querySelector('.sheet')?.remove(); sayText = '(다녀올게)'; const jg = girlOf(cur()); if (jg) toast(`${nameOf(jg)}: ${GLM[jg].job}`); return render(); }
   if (a === 'getmail') { const n = (S.mail || []).reduce((t, m) => t + m.c, 0); S.coins += n; S.mail = []; save(); panel = null; document.querySelector('.sheet')?.remove(); toast(`+${n} 코인`); return render(); }
   if (a === 'gtab') { panel.tab = v; panel.sel = null; return renderPanel(); }
   if (a === 'givesel') { panel.sel = v; return renderPanel(); }
@@ -416,6 +457,10 @@ document.addEventListener('click', e => {
   if (a === 'pick') { S.cur = b.dataset.id; sayText = null; save(); panel = null; document.querySelector('.sheet')?.remove(); return render(); }
   if (a === 'logout') { panel = null; document.querySelector('.sheet')?.remove(); return logOut(); }
   if (a === 'pull') return pull();
+  if (a === 'pair') return openPanel('pair');
+  if (a === 'gpull') return gpull();
+  if (a === 'gplace') return openPanel('place', { g: v });
+  if (a === 'gput') { const g = panel.g; S.girls[g].with = v; S.cur = v; save(); panel = null; document.querySelector('.sheet')?.remove(); sayText = null; GA.x = -anim.x || 0.4; GA.sayT = GLM[g].hello; GA.sayUntil = anim.tick + 22; GA.heart = 14; return render(); }
   if (a === 'coin') { const n = 10 + Math.floor(Math.random() * 21); S.coins += n; b.remove(); dropStyle = null; toast(`+${n} 코인`); save(); document.querySelector('.pill.coin').lastChild.textContent = S.coins.toLocaleString('ko-KR'); return; }
   if (a === 'dtab') { panel.tab = v; panel.pv = null; return renderPanel(); }
   if (a === 'dcancel') { panel.pv = null; return renderPanel(); }
@@ -445,20 +490,54 @@ setInterval(() => animStep(true), 170);
 function animStep(adv) {
   const man = $('#man'); if (!man || !S) return;
   const id = cur(), o = S.owned[id], A = anim, n = FR[id] || [4, 4, 4, 4];
-  if (!adv) return paintMan(man, id, o, A, n);
+  if (!adv) { paintMan(man, id, o, A, n); return paintGirl(id, o); }
   A.tick++; A.f++; A.t--;
   if (A.mode === 'walk') { A.x += A.dir * 0.025; if (Math.abs(A.x) > 0.9) { A.dir = -A.dir; A.x = Math.max(-0.9, Math.min(0.9, A.x)); } }
-  if (A.t <= 0) { A.mode = pick(MODES); A.t = 12 + Math.floor(Math.random() * 18); if (Math.random() < .5) A.dir = -A.dir; }
+  if (A.t <= 0) { A.face = null; A.mode = pick(MODES); A.t = 12 + Math.floor(Math.random() * 18); if (Math.random() < .5) A.dir = -A.dir; }
   if (Date.now() - (S.lastDrop || 0) > DROP_MS && !$('#drop') && !o.job) { const r = document.querySelector('.lcd .room'); if (r) { dropStyle = `position:absolute;left:${10 + Math.random() * 75}%;bottom:${4 + Math.random() * 18}%;width:30px;height:30px;padding:0;border:0;background:url(assets/ui/ic_coin.png) center/24px no-repeat;z-index:3;animation:emo 1s ease-in-out infinite`; placeDrop(); S.lastDrop = Date.now(); } }
-  if (A.tick % 45 === 0) A.mumT = mumbleOf(id, o); else if (A.tick % 45 === 20) A.mumT = '';
+  const g = girlOf(id);
+  if (!g) { if (A.tick % 45 === 0) A.mumT = mumbleOf(id, o); else if (A.tick % 45 === 20) A.mumT = ''; }
+  else if (!o.sleeping && !o.job) pairStep(id, o, g);
   if (A.heart > 0) A.heart--;
   if (o.job) { man.style.display = 'none'; $('#shd').style.display = 'none'; $('#emo').hidden = true; $('#mum').hidden = true; const jl = $('#jobleft'); if (jl) jl.textContent = timeLeft(o.job.until); if (Date.now() >= o.job.until) { tickTime(); save(); render(); } return; }
   paintMan(man, id, o, A, n);
+  paintGirl(id, o);
+}
+// 둘이 같이 있을 때: 따로 걷다가 가끔 대화, 하트, 다툼
+const GA = { x: 0.4, dir: -1, mode: 'walk', t: 14, f: 0, heart: 0, angry: 0, face: null, sayT: '', sayUntil: 0, next: null };
+function pairStep(id, o, g) {
+  const A = anim, G = GA, gl = GLM[g], T = A.tick;
+  G.f++; G.t--;
+  if (G.mode === 'walk') { G.x += G.dir * 0.022; if (Math.abs(G.x) > 0.9) { G.dir = -G.dir; G.x = Math.max(-0.9, Math.min(0.9, G.x)); } }
+  if (G.t <= 0) { G.face = null; G.mode = pick(['walk', 'walk', 'idle', 'back', 'walk']); G.t = 12 + Math.floor(Math.random() * 18); if (Math.random() < .5) G.dir = -G.dir; }
+  if (G.heart > 0) G.heart--; if (G.angry > 0) G.angry--;
+  if (A.mumT && T >= (A.mumUntil || 0)) A.mumT = '';
+  if (G.sayT && T >= G.sayUntil) G.sayT = '';
+  if (G.next && T >= G.next.at) { G.sayT = G.next.t; G.sayUntil = T + 20; if (G.next.fx === 'heart') G.heart = 14; G.next = null; }
+  if (T % 60 !== 0) return;
+  const r = Math.random(), side = A.x > 0 ? -1 : 1, meet = () => { G.x = Math.max(-0.9, Math.min(0.9, A.x + side * 0.62)); A.mode = G.mode = 'idle'; A.t = G.t = 26; };
+  if (r < .5) { A.mumT = mumbleOf(id, o); A.mumUntil = T + 16; G.next = { at: T + 14, t: pick(gl.react) }; }
+  else if (r < .8) { meet(); A.face = side > 0 ? 3 : 2; G.face = side > 0 ? 2 : 3; A.heart = 18; G.heart = 18; G.sayT = pick(gl.heart); G.sayUntil = T + 22; o.fun = clamp(o.fun + 2); }
+  else { meet(); A.face = side > 0 ? 2 : 3; G.face = side > 0 ? 3 : 2; A.angry = 16; G.angry = 18; G.sayT = pick(gl.fight); G.sayUntil = T + 20; G.next = { at: T + 34, t: pick(gl.makeup), fx: 'heart' }; }
+}
+function paintGirl(id, o) {
+  const man = $('#gman'); if (!man) return;
+  const g = girlOf(id), G = GA, n = FR[g] || [4, 4, 4, 4], hide = o.sleeping || o.job;
+  man.style.display = hide ? 'none' : ''; $('#gshd').style.display = hide ? 'none' : '';
+  const emo = $('#gemo'), mum = $('#gmum');
+  if (hide) { emo.hidden = true; mum.hidden = true; return; }
+  const row = G.face != null && G.mode === 'idle' ? G.face : G.mode === 'walk' ? (G.dir < 0 ? 2 : 3) : G.mode === 'back' ? 1 : 0;
+  const col = G.mode === 'walk' ? G.f % n[row] : 0, img = man.firstElementChild;
+  img.style.marginLeft = -col * 66 + 'px'; img.style.marginTop = -row * 91 + 'px';
+  man.style.left = `calc(50% + ${G.x * 38}% - 33px)`; $('#gshd').style.left = `calc(50% + ${G.x * 38}% - 27px)`;
+  const e = G.angry > 0 ? ['흥!', '#c0392b'] : G.heart > 0 ? ['♥', '#e0457b'] : null;
+  emo.hidden = !e; if (e) { emo.textContent = e[0]; emo.style.color = e[1]; emo.style.left = `calc(50% + ${G.x * 38}% + 14px)`; emo.style.bottom = '52%'; }
+  mum.hidden = !G.sayT; if (G.sayT) { mum.textContent = G.sayT; mum.style.left = `clamp(4px, calc(50% + ${G.x * 38}% - 70px), calc(100% - 64%))`; }
 }
 function paintMan(man, id, o, A, n) {
   const sl_ = $('#sleepleft'); if (o.sleeping && sl_) { sl_.textContent = timeLeft(wakeAt(o)).replace(' 남음', ''); if (Date.now() >= wakeAt(o)) { tickTime(); save(); return render(); } }
   if (o.job) { man.style.display = 'none'; return; }
-  const sl = o.sleeping, row = sl ? 0 : A.mode === 'walk' ? (A.dir < 0 ? 2 : 3) : A.mode === 'back' ? 1 : 0;
+  const sl = o.sleeping, row = sl ? 0 : A.face != null && A.mode === 'idle' ? A.face : A.mode === 'walk' ? (A.dir < 0 ? 2 : 3) : A.mode === 'back' ? 1 : 0;
   const col = A.mode === 'walk' && !sl ? A.f % n[row] : 0, x = sl ? 0 : A.x, left = `calc(50% + ${x * 38}% - 33px)`;
   const img = man.firstElementChild; img.style.marginLeft = -col * 66 + 'px'; img.style.marginTop = -row * 91 + 'px';
   man.style.left = left; man.style.display = sl ? 'none' : ''; $('#shd').style.display = sl ? 'none' : ''; man.classList.toggle('hop', A.mode === 'hop' && !sl);
@@ -474,8 +553,8 @@ setInterval(() => { if (S && user) { tickTime(); save(); } }, 60000);
 // ---------- 시작 ----------
 (async () => {
   app.innerHTML = '<div class="start"><div class="egg"><div class="scr"></div></div><div class="note">불러오는 중....</div></div>';
-  const [c, t, f, it, mu, ct, tv] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json'].map(u => fetch(u + '?v=38').then(r => r.ok ? r.json() : {})));
-  CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x])); MUM = mu; CTRY = ct; TRV = tv;
+  const [c, t, f, it, mu, ct, tv, gl] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json'].map(u => fetch(u + '?v=40').then(r => r.ok ? r.json() : {})));
+  CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x])); MUM = mu; CTRY = ct; TRV = tv; GL = Array.isArray(gl) ? gl : []; GLM = Object.fromEntries(GL.map(x => [x.id, x]));
   try { await initFirebase(); } catch (e) { console.warn('Firebase 연결 실패, 기기 저장으로', e); fb = null; }
   if (fb) {
     fb.AU.onAuthStateChanged(fb.auth, async u => { if (u && !user) { user = { uid: u.uid, id: u.email.split('@')[0] }; await enter(); } else if (!u) { user = null; render(); } });
