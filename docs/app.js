@@ -25,9 +25,9 @@ const stageOf = l => STAGES.filter(s => l >= s[2]).pop();
 const MOODS = ['기분 최고', '설렘', '들뜸', '나른함', '심술', '시무룩', '멍함', '두근두근', '느긋함', '투덜투덜'];
 function moodOf(id) { let h = 0; for (const ch of today() + id) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return MOODS[h % MOODS.length]; }
 function stateOf(o) { if (o.sleeping) return '쿨쿨'; const a = []; if (o.food < 35) a.push('배고픔'); if (o.energy < 30) a.push('졸림'); if (o.fun < 35) a.push('심심함'); if (o.clean < 35) a.push('꼬질꼬질'); return a.join(' · ') || '만족'; }
-const JOB_NAME = { curly_suit: '어두운 세계', blue: '크로우 임무', blonde_student: '누나네 카페', mole: '학원 강사', punk: '공연', bartender: '바텐더', curly_coat: '도서관 정리', mint: '잡지 모델', karate: '도장 사범 대리', baseball: '배팅 센터', spiky: '탈환 의뢰', kyon: '편의점', ponytail: '수박 농장', chiro: '담배 가게 카운터', saiki: '라멘집 (몰래)', nozaki: '만화 어시스턴트', ahoge: '과외', blindfold: '서버 관리', headphone: '영상 편집', gintoki: '해결사 의뢰', nifuji: '게임 테스터', usui: '메이드 카페 주방', izumi: '사신 업무', shima: '카페', hidden: '회사' };
+const JOB_NAME = { curly_suit: '어두운 세계', blue: '크로우 임무', blonde_student: '누나네 카페', mole: '학원 강사', punk: '공연', bartender: '바텐더', curly_coat: '사건 해결', mint: '잡지 모델', karate: '도장 사범 대리', baseball: '배팅 센터', spiky: '탈환 의뢰', kyon: '편의점', ponytail: '수박 농장', chiro: '담배 가게 카운터', saiki: '라멘집 (몰래)', nozaki: '만화 어시스턴트', ahoge: '과외', blindfold: '서버 관리', headphone: '영상 편집', gintoki: '해결사 의뢰', nifuji: '게임 테스터', usui: '메이드 카페 주방', izumi: '사신 업무', shima: '카페', hidden: '회사' };
 // 알바 대신 다른 곳에 가는 캐릭터: [버튼, 방에 뜨는 글, 끝났을 때, 막힐 때]
-const WORK = { hidden: ['회사', '회사 출근 중', '퇴근!', '회사에 가서'], blue: ['크로우 임무', '크로우 임무 하러 가는 중', '크로우 임무를 마치고 돌아왔다!', '크로우 임무 중이라'], punk: ['공연', '공연하러 가는 중', '공연을 마치고 돌아왔다!', '공연 중이라'], curly_suit: ['어두운 세계', '어두운 세계로 가는 중', '어두운 세계에서 돌아왔다!', '어두운 세계에 가서'] };
+const WORK = { hidden: ['회사', '회사 출근 중', '퇴근!', '회사에 가서'], blue: ['크로우 임무', '크로우 임무 하러 가는 중', '크로우 임무를 마치고 돌아왔다!', '크로우 임무 중이라'], punk: ['공연', '공연하러 가는 중', '공연을 마치고 돌아왔다!', '공연 중이라'], curly_coat: ['사건 해결', '사건 해결하러 가는 중', '사건을 해결하고 돌아왔다!', '사건 해결 중이라'], curly_suit: ['어두운 세계', '어두운 세계로 가는 중', '어두운 세계에서 돌아왔다!', '어두운 세계에 가서'] };
 const JW = id => WORK[id] ? WORK[id][0] : '알바';
 const JOBS = [['30 분', 30, 40], ['3 시간', 180, 150], ['8 시간', 480, 350]];
 const DROP_MS = 5 * 60 * 1000;
@@ -583,7 +583,7 @@ setInterval(() => { if (S && user) { tickTime(); save(); } }, 60000);
 // ---------- 시작 ----------
 (async () => {
   app.innerHTML = '<div class="start"><div class="egg"><div class="scr"></div></div><div class="note">불러오는 중....</div></div>';
-  const [c, t, f, it, mu, ct, tv, gl] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json'].map(u => fetch(u + '?v=70').then(r => r.ok ? r.json() : {})));
+  const [c, t, f, it, mu, ct, tv, gl] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json'].map(u => fetch(u + '?v=71').then(r => r.ok ? r.json() : {})));
   CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x])); MUM = mu; CTRY = ct; TRV = tv; GL = Array.isArray(gl) ? gl : []; GLM = Object.fromEntries(GL.map(x => [x.id, x]));
   try { await initFirebase(); } catch (e) { console.warn('Firebase 연결 실패, 기기 저장으로', e); fb = null; }
   if (fb) {
