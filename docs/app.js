@@ -486,12 +486,13 @@ function reveal(id, dup) {
   };
 }
 
+// 치트: 도감 창에서 제목이나 탭을 3초 안에 5번 누르면 3000 코인 (휴대폰 빠른 연타도 세려고 손가락이 닿는 순간을 세요)
+document.addEventListener('pointerdown', e => {
+  if (!(panel && panel.k === 'dex' && (e.target.closest('.phead') || e.target.closest('.tabs')))) return;
+  const now = Date.now(); cheat.t = (cheat.t || []).filter(x => now - x < 3000); cheat.t.push(now);
+  if (cheat.t.length >= 5) { cheat.t = []; S.coins += 3000; save(); toast('+3000 코인'); render(); }
+});
 document.addEventListener('click', e => {
-  // 치트: 도감 창 제목(또는 도감 탭)을 2초 안에 5번 누르면 3000 코인
-  if (panel && panel.k === 'dex' && (e.target.closest('.phead h2') || e.target.closest('[data-act=xtab]'))) {
-    const now = Date.now(); cheat.t = (cheat.t || []).filter(x => now - x < 2000); cheat.t.push(now);
-    if (cheat.t.length >= 5) { cheat.t = []; S.coins += 3000; save(); toast('+3000 코인'); render(); return; }
-  }
   const b = e.target.closest('[data-act]'); if (!b) return;
   const a = b.dataset.act, v = b.dataset.v;
   if (a === 'mode-join' || a === 'mode-login') { startMode = a.slice(5); return renderStart(); }
@@ -608,7 +609,7 @@ setInterval(() => { if (S && user) { tickTime(); save(); } }, 60000);
 // ---------- 시작 ----------
 (async () => {
   app.innerHTML = '<div class="start"><div class="egg"><div class="scr"></div></div><div class="note">불러오는 중....</div></div>';
-  const [c, t, f, it, mu, ct, tv, gl, sts] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json', 'data/sets.json'].map(u => fetch(u + '?v=86').then(r => r.ok ? r.json() : {})));
+  const [c, t, f, it, mu, ct, tv, gl, sts] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json', 'data/sets.json'].map(u => fetch(u + '?v=87').then(r => r.ok ? r.json() : {})));
   CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x])); MUM = mu; CTRY = ct; TRV = tv; GL = Array.isArray(gl) ? gl : []; SETS = Array.isArray(sts) ? sts : []; GLM = Object.fromEntries(GL.map(x => [x.id, x]));
   try { await initFirebase(); } catch (e) { console.warn('Firebase 연결 실패, 기기 저장으로', e); fb = null; }
   if (fb) {
