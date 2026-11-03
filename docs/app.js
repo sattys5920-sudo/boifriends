@@ -600,7 +600,7 @@ setInterval(() => { if (S && user) { tickTime(); save(); } }, 60000);
 // ---------- 시작 ----------
 (async () => {
   app.innerHTML = '<div class="start"><div class="egg"><div class="scr"></div></div><div class="note">불러오는 중....</div></div>';
-  const [c, t, f, it, mu, ct, tv, gl, sts] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json', 'data/sets.json'].map(u => fetch(u + '?v=79').then(r => r.ok ? r.json() : {})));
+  const [c, t, f, it, mu, ct, tv, gl, sts] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json', 'data/sets.json'].map(u => fetch(u + '?v=80').then(r => r.ok ? r.json() : {})));
   CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x])); MUM = mu; CTRY = ct; TRV = tv; GL = Array.isArray(gl) ? gl : []; SETS = Array.isArray(sts) ? sts : []; GLM = Object.fromEntries(GL.map(x => [x.id, x]));
   try { await initFirebase(); } catch (e) { console.warn('Firebase 연결 실패, 기기 저장으로', e); fb = null; }
   if (fb) {

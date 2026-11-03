@@ -32,7 +32,8 @@
    "blue",
    "punk",
    "chiro",
-   "nifuji"
+   "nifuji",
+   "bartender"
   ]
  },
  {
@@ -49,7 +50,8 @@
   "n": "운동부",
   "m": [
    "baseball",
-   "karate"
+   "karate",
+   "blonde_student"
   ]
  },
  {
@@ -198,12 +200,11 @@
   ]
  },
  {
-  "k": "compete",
-  "n": "지는 건 싫어",
+  "k": "shades",
+  "n": "선글라스를 쓰는 남자",
   "m": [
-   "blonde_student",
-   "baseball",
-   "karate"
+   "bartender",
+   "spiky"
   ]
  },
  {
