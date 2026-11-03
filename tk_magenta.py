@@ -78,6 +78,7 @@ def build(cid, path, cols=5, rows=4, pick=None):
             if h > fh - T.R: s = s[h - (fh - T.R):]; h = fh - T.R
             ox, oy = (fw - w) // 2, di * fh + fh - T.R - h
             dst = block[oy:oy + h, k * fw + ox:k * fw + ox + w]; dst[:] = np.where(s[..., 3:4] > 0, s, dst)
+    import tk_whiten; block = block if cid in tk_whiten.SKIP else tk_whiten.whiten(block)[0]   # 피부 미백
     Image.fromarray(block).save(f'docs/assets/ch/{cid}.webp', 'WEBP', lossless=True)
     fr = json.load(open('docs/data/frames.json')); fr[cid] = [min(4, len(pick[d])) for d in T.DIRS]; json.dump(fr, open('docs/data/frames.json', 'w'))
     return block
