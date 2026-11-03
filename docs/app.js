@@ -166,7 +166,7 @@ function meterHTML(o) {
 }
 const ic = (act, img, label, pressed) => `<button class="ic" data-act="${act}" ${pressed ? 'aria-pressed="true"' : ''}><img src="assets/ui/ic_${img}.png?v=2" alt="">${label}</button>`;
 
-let dropStyle = null;
+let dropStyle = null; const cheat = {};
 function placeDrop() { const r = document.querySelector('.lcd .room'); if (!r || !dropStyle || $('#drop')) return; const c = document.createElement('button'); c.id = 'drop'; c.dataset.act = 'coin'; c.setAttribute('aria-label', '동전 줍기'); c.style.cssText = dropStyle; r.appendChild(c); }
 function render() { const y = window.scrollY; renderNow(); placeDrop(); animStep(false); window.scrollTo(0, y); }
 function renderNow() {
@@ -487,6 +487,11 @@ function reveal(id, dup) {
 }
 
 document.addEventListener('click', e => {
+  // 치트: 도감 창 제목(또는 도감 탭)을 2초 안에 5번 누르면 3000 코인
+  if (panel && panel.k === 'dex' && (e.target.closest('.phead h2') || e.target.closest('[data-act=xtab]'))) {
+    const now = Date.now(); cheat.t = (cheat.t || []).filter(x => now - x < 2000); cheat.t.push(now);
+    if (cheat.t.length >= 5) { cheat.t = []; S.coins += 3000; save(); toast('+3000 코인'); render(); return; }
+  }
   const b = e.target.closest('[data-act]'); if (!b) return;
   const a = b.dataset.act, v = b.dataset.v;
   if (a === 'mode-join' || a === 'mode-login') { startMode = a.slice(5); return renderStart(); }
@@ -603,7 +608,7 @@ setInterval(() => { if (S && user) { tickTime(); save(); } }, 60000);
 // ---------- 시작 ----------
 (async () => {
   app.innerHTML = '<div class="start"><div class="egg"><div class="scr"></div></div><div class="note">불러오는 중....</div></div>';
-  const [c, t, f, it, mu, ct, tv, gl, sts] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json', 'data/sets.json'].map(u => fetch(u + '?v=82').then(r => r.ok ? r.json() : {})));
+  const [c, t, f, it, mu, ct, tv, gl, sts] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json', 'data/sets.json'].map(u => fetch(u + '?v=86').then(r => r.ok ? r.json() : {})));
   CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x])); MUM = mu; CTRY = ct; TRV = tv; GL = Array.isArray(gl) ? gl : []; SETS = Array.isArray(sts) ? sts : []; GLM = Object.fromEntries(GL.map(x => [x.id, x]));
   try { await initFirebase(); } catch (e) { console.warn('Firebase 연결 실패, 기기 저장으로', e); fb = null; }
   if (fb) {
