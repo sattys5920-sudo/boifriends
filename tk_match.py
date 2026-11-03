@@ -32,22 +32,35 @@ def pix_size(sheet):
         if err < 22: best = k
     return best
 
-def hw(f):
-    t, b, l, r = bbox(f); f = f[t:b, l:r]; c = chin(f); return int((f[:c, :, 3] > 0).any(0).sum())
+def skin(f):
+    R, G, B = [f[..., i].astype(int) for i in range(3)]; al = f[..., 3] > 0
+    return al & (R > 150) & (R > G) & (G > B) & (R - B > 20) & (R - B < 120)
 
-def scales(f, rb, Ht, bw):
-    t, b, l, r = bbox(f); f = f[t:b, l:r]; h = f.shape[0]; c = chin(f)
-    w0 = max(1, int((f[:c, :, 3] > 0).any(0).sum()))
-    sh = min(np.clip(rb * Ht / max(c, 1), .8, 1.2), bw * 1.0 / w0)   # 머리 폭은 짝 남자애 머리보다 넓지 않게
-    sb = np.clip((1 - rb) * Ht / max(h - c, 1), .65, 1.15)
-    return sh, sb, c / h
+def measure(f):
+    """[얼굴 폭, 몸통 폭, 턱 위치, 키] — 얼굴 폭은 피부가 가장 넓은 줄, 몸통 폭은 턱 아래 30% 지점"""
+    t, b, l, r = bbox(f); f = f[t:b, l:r]; h = f.shape[0]; c = chin(f); sk = skin(f[:c])
+    fw = int(sk.sum(1).max()) if sk.any() else int((f[:c, :, 3] > 0).any(0).sum() * .7)
+    y = min(h - 1, c + int((h - c) * .3)); row = np.nonzero(f[y, :, 3] > 0)[0]
+    tw = int(row.max() - row.min() + 1) if len(row) else f.shape[1]
+    return fw, tw, c, h
+
+def scales(gf, bf):
+    gfw, gtw, gc, gh = measure(gf); bfw, btw, bc, bh = measure(bf)
+    sh = np.clip(bfw * .95 / max(gfw, 1), .95, 1.3)          # 얼굴을 짝 남자애 얼굴 크기만큼
+    sh = min(sh, max(.95, bc * 1.0 / max(gc, 1)))              # 머리 높이는 짝 남자애 머리보다 크지 않게
+    Ht = bh * .95
+    sbh = np.clip((Ht - gc * sh) / max(gh - gc, 1), .75, 1.1)  # 남은 키가 몸 (너무 짧아지지 않게)
+    tot = gc * sh + (gh - gc) * sbh
+    if tot > Ht * 1.02: k = Ht / tot; sh *= k; sbh *= k        # 전체 키가 넘치면 같이 줄여요
+    sbw = np.clip(btw * .9 / max(gtw, 1), 1.0, 1.4)           # 몸통 폭을 짝 남자애 어깨만큼 넓게
+    return sh, sbh, sbw, gc / gh
 
 def reshape(f, sc):
-    sh, sb, cr = sc
+    sh, sbh, sbw, cr = sc
     t, b, l, r = bbox(f); f = f[t:b, l:r]; h = f.shape[0]; c = max(1, round(h * cr))   # 모든 칸에 같은 배율·같은 턱 위치
     head, body = f[:c], f[c:]
     H = Image.fromarray(head).resize((max(1, round(head.shape[1] * sh)), max(1, round(c * sh))), Image.LANCZOS)
-    Bd = Image.fromarray(body).resize((max(1, round(body.shape[1] * (sb + sh) / 2)), max(1, round((h - c) * sb))), Image.LANCZOS)
+    Bd = Image.fromarray(body).resize((max(1, round(body.shape[1] * sbw)), max(1, round((h - c) * sbh))), Image.LANCZOS)
     w = max(H.width, Bd.width); out = Image.new('RGBA', (w, H.height + Bd.height - 1))
     out.alpha_composite(Bd, ((w - Bd.width) // 2, H.height - 1)); out.alpha_composite(H, ((w - H.width) // 2, 0))
     a = np.array(out); a[..., 3] = np.where(a[..., 3] > 110, 255, 0); return a
@@ -67,9 +80,8 @@ def pixelate(sheet, k):
 
 def match(g, b, fr):
     gs, bs = load(g, BASE), load(b, BASE if b != 'meroko' else None)
-    bf = bs[:FH, :FW]; bt, bb, _, _ = bbox(bf); bh = bb - bt; rb = chin(bf[bt:bb]) / bh
-    Ht = bh * .93; bw = hw(bf)   # 여자애는 짝보다 조금 작게, 머리 폭은 짝 기준
-    out = np.zeros_like(gs); n = fr[g]; sc = scales(gs[:FH, :FW], rb, Ht, bw)
+    bf = bs[:FH, :FW]
+    out = np.zeros_like(gs); n = fr[g]; sc = scales(gs[:FH, :FW], bf)
     for r in range(4):
         for c in range(n[r]):
             f = gs[r * FH:(r + 1) * FH, c * FW:(c + 1) * FW]
@@ -78,7 +90,7 @@ def match(g, b, fr):
             out[r * FH:(r + 1) * FH, c * FW:(c + 1) * FW] = place(reshape(f, sc), fb)
     out = pixelate(out, 2)   # 남자애들 실제 굵기는 2배 정도 (3배는 얼굴이 뭉개져요)
     Image.fromarray(out).save(f'docs/assets/ch/{g}.webp', 'WEBP', lossless=True)
-    return round(float(rb), 2)
+    return tuple(round(float(x), 2) for x in sc)
 
 if __name__ == '__main__':
     G = json.load(open('docs/data/girls.json')); fr = json.load(open('docs/data/frames.json'))
