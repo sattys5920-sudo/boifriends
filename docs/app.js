@@ -33,6 +33,8 @@ function addLove(o, n) { if (!o.lv || o.lv.day !== today()) o.lv = { day: today(
 let CH = [], CHM = {}, TALK = {}, FR = {}, IT = [], ITM = {}, MUM = {}, CTRY = [], TRV = {}, GL = [], GLM = {};
 // 짝: 도감 25명을 다 모으면 열려요. 여자애는 방 하나에 한 명씩, 남자친구와 같이 행동해요
 const allMet = () => CH.length && CH.every(c => S.owned[c.id]);
+// 짝에 따라 말투가 바뀌면(voice) 그 짝 방에서는 그 대사 묶음을 써요
+const GLX = g => { const gl = GLM[g], b = S.girls && S.girls[g] && S.girls[g].with, v = gl.pair && gl.pair[b] && gl.pair[b].voice; return v ? Object.assign({}, gl, v) : gl; };
 const hisCall = g => { const b = S.girls[g].with, gl = GLM[g]; return S.girls[g].bc || (gl.pair && gl.pair[b] && gl.pair[b].his) || nameOf(g); };   // 남자애가 여자애를 부르는 이름
 const herCall = g => { const b = S.girls[g].with, gl = GLM[g]; return S.girls[g].gc || (gl.pair && gl.pair[b] && gl.pair[b].call) || nameOf(b); };   // 여자애가 남자애를 부르는 이름
 const BOY_HEART = ['{her}.', '{her}, 이리 와.', '{her}, 오늘 좀 예쁘네.', '....{her}, 좋아해.'], BOY_FIGHT = ['{her}, 왜 그래?', '....{her}, 내가 뭘 했는데.', '{her}, 미안해.'];
@@ -230,7 +232,7 @@ function renderPanel() {
   el.innerHTML = `<div class="panel" role="dialog" aria-label="${esc(title)}"><div class="phead"><h2>${esc(title)}</h2>${Object.keys(S.owned).length ? '<button class="close" data-act="close" aria-label="닫기"><img src="assets/ui/ic_back.png" alt=""></button>' : `<span class="pill coin"><img src="assets/ui/ic_coin.png" alt="">${S.coins}</span>`}</div><div class="pbody">${body}</div></div>`;
   el.addEventListener('click', e => { if (e.target === el) closePanel(); });
   document.body.appendChild(el);
-  if (panel.k === 'names') { const f3 = el.querySelector('#namef'); f3.onsubmit = ev => { ev.preventDefault(); const h = S.girls[panel.g]; h.bc = el.querySelector('#bc').value.trim(); h.gc = el.querySelector('#gc').value.trim(); save(); toast('저장했어요.'); GA.sayT = withHim(pick(GLM[panel.g].heart), panel.g); GA.sayUntil = anim.tick + 20; GA.heart = 14; closePanel(); }; }
+  if (panel.k === 'names') { const f3 = el.querySelector('#namef'); f3.onsubmit = ev => { ev.preventDefault(); const h = S.girls[panel.g]; h.bc = el.querySelector('#bc').value.trim(); h.gc = el.querySelector('#gc').value.trim(); save(); toast('저장했어요.'); GA.sayT = withHim(pick(GLX(panel.g).heart), panel.g); GA.sayUntil = anim.tick + 20; GA.heart = 14; closePanel(); }; }
   if (panel.k === 'profile') { const f2 = el.querySelector('#callf'); if (f2) f2.onsubmit = ev => { ev.preventDefault(); const o = S.owned[cur()]; o.call = el.querySelector('#call').value.trim() || '너'; const hn = el.querySelector('#hname'); if (hn) o.name = hn.value.trim() || '???'; save(); toast('저장했어요.'); render(); }; }
 }
 function pWho() {
@@ -339,7 +341,7 @@ function give(k) {
   else { addLove(o, 1); msg = `(${it.n}, 고마워)`; }
   sayText = msg; panel = null; document.querySelector('.sheet')?.remove(); if (it.t === 'food') girlEat(id); save(); render();
 }
-function girlEat(id) { const g = girlOf(id); if (!g) return; GA.heart = 12; GA.sayT = withHim(pick(GLM[g].eat), g); GA.sayUntil = anim.tick + 18; }
+function girlEat(id) { const g = girlOf(id); if (!g) return; GA.heart = 12; GA.sayT = withHim(pick(GLX(g).eat), g); GA.sayUntil = anim.tick + 18; }
 function pJob() {
   const id = cur(), o = S.owned[id];
   if (o.job) return ['알바', `<div class="card" style="text-align:center;line-height:1.8"><img src="assets/ui/ic_job.png" alt="" style="width:32px"><br><b>${esc(JOB_NAME[id])}</b><br>${timeLeft(o.job.until)} · +${o.job.pay} 코인</div>`];
@@ -364,7 +366,7 @@ function startTrip(k) {
   S.coins -= c.p; save(); panel = null; document.querySelector('.sheet')?.remove();
   const tg = girlOf(id);
   const lines = [...(TRV[id] || [])].sort(() => Math.random() - .5).slice(0, 3).map(l => l.split('{place}').join(c.n).split('{call}').join(o.call || '너'));
-  if (tg) lines[1] = `${nameOf(tg)}: ${withHim(sub(pick(GLM[tg].trip), o, c.n), tg)}`;
+  if (tg) lines[1] = `${nameOf(tg)}: ${withHim(sub(pick(GLX(tg).trip), o, c.n), tg)}`;
   const n = (FR[id] || [4, 4, 4, 4])[3], el = document.createElement('div'); el.className = 'tripview';
   el.innerHTML = `<div class="tsay"> </div><div class="tstage" style="background-image:url(assets/travel/${k}.png?v=2)"><div class="tplace">${esc(c.n)}</div>
     <div class="twalker"><img class="px" src="assets/ch/${id}.webp?v=18" alt=""></div>${tg ? `<div class="twalker tgirl"><img class="px" src="assets/ch/${tg}.webp?v=18" alt=""></div>` : ''}<span class="emo tjoy">♪</span></div>
@@ -471,7 +473,7 @@ document.addEventListener('click', e => {
   if (a === 'prev' || a === 'next') { const ids = Object.keys(S.owned), i = ids.indexOf(cur()); S.cur = ids[(i + (a === 'next' ? 1 : ids.length - 1)) % ids.length]; sayText = null; save(); return render(); }
   if (['who', 'profile', 'decor', 'gacha', 'dex', 'menu', 'give', 'job', 'mail', 'travel'].includes(a)) return openPanel(a);
   if (a === 'gotrip') return startTrip(v);
-  if (a === 'dojob') { const o = S.owned[cur()], j = JOBS[+v]; o.job = { until: Date.now() + j[1] * 60000, pay: j[2] }; o.sleeping = false; save(); panel = null; document.querySelector('.sheet')?.remove(); sayText = '(다녀올게)'; const jg = girlOf(cur()); if (jg) toast(`${nameOf(jg)}: ${GLM[jg].job}`); return render(); }
+  if (a === 'dojob') { const o = S.owned[cur()], j = JOBS[+v]; o.job = { until: Date.now() + j[1] * 60000, pay: j[2] }; o.sleeping = false; save(); panel = null; document.querySelector('.sheet')?.remove(); sayText = '(다녀올게)'; const jg = girlOf(cur()); if (jg) toast(`${nameOf(jg)}: ${GLX(jg).job}`); return render(); }
   if (a === 'getmail') { const n = (S.mail || []).reduce((t, m) => t + m.c, 0); S.coins += n; S.mail = []; save(); panel = null; document.querySelector('.sheet')?.remove(); toast(`+${n} 코인`); return render(); }
   if (a === 'gtab') { panel.tab = v; panel.sel = null; return renderPanel(); }
   if (a === 'givesel') { panel.sel = v; return renderPanel(); }
@@ -484,7 +486,7 @@ document.addEventListener('click', e => {
   if (a === 'pair') return openPanel('pair');
   if (a === 'gpull') return gpull();
   if (a === 'gplace') return openPanel('place', { g: v });
-  if (a === 'gput') { const g = panel.g; S.girls[g].with = v; S.cur = v; save(); panel = null; document.querySelector('.sheet')?.remove(); sayText = null; GA.x = -anim.x || 0.4; GA.sayT = withHim(GLM[g].hello, g); GA.sayUntil = anim.tick + 22; GA.heart = 14; render(); return openPanel('names', { g }); }
+  if (a === 'gput') { const g = panel.g; S.girls[g].with = v; S.cur = v; save(); panel = null; document.querySelector('.sheet')?.remove(); sayText = null; GA.x = -anim.x || 0.4; GA.sayT = withHim(GLX(g).hello, g); GA.sayUntil = anim.tick + 22; GA.heart = 14; render(); return openPanel('names', { g }); }
   if (a === 'gnames') return openPanel('names', { g: v });
   if (a === 'coin') { const n = 10 + Math.floor(Math.random() * 21); S.coins += n; b.remove(); dropStyle = null; toast(`+${n} 코인`); save(); document.querySelector('.pill.coin').lastChild.textContent = S.coins.toLocaleString('ko-KR'); return; }
   if (a === 'dtab') { panel.tab = v; panel.pv = null; return renderPanel(); }
@@ -531,7 +533,7 @@ function animStep(adv) {
 // 둘이 같이 있을 때: 따로 걷다가 가끔 대화, 하트, 다툼
 const GA = { x: 0.4, dir: -1, mode: 'walk', t: 14, f: 0, heart: 0, angry: 0, face: null, sayT: '', sayUntil: 0, next: null };
 function pairStep(id, o, g) {
-  const A = anim, G = GA, gl = GLM[g], T = A.tick;
+  const A = anim, G = GA, gl = GLX(g), T = A.tick;
   G.f++; G.t--;
   if (G.mode === 'walk') { G.x += G.dir * 0.022; if (Math.abs(G.x) > 0.9) { G.dir = -G.dir; G.x = Math.max(-0.9, Math.min(0.9, G.x)); } }
   if (G.t <= 0) { G.face = null; G.mode = pick(['walk', 'walk', 'idle', 'back', 'walk']); G.t = 12 + Math.floor(Math.random() * 18); if (Math.random() < .5) G.dir = -G.dir; }
@@ -578,7 +580,7 @@ setInterval(() => { if (S && user) { tickTime(); save(); } }, 60000);
 // ---------- 시작 ----------
 (async () => {
   app.innerHTML = '<div class="start"><div class="egg"><div class="scr"></div></div><div class="note">불러오는 중....</div></div>';
-  const [c, t, f, it, mu, ct, tv, gl] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json'].map(u => fetch(u + '?v=65').then(r => r.ok ? r.json() : {})));
+  const [c, t, f, it, mu, ct, tv, gl] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json'].map(u => fetch(u + '?v=66').then(r => r.ok ? r.json() : {})));
   CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x])); MUM = mu; CTRY = ct; TRV = tv; GL = Array.isArray(gl) ? gl : []; GLM = Object.fromEntries(GL.map(x => [x.id, x]));
   try { await initFirebase(); } catch (e) { console.warn('Firebase 연결 실패, 기기 저장으로', e); fb = null; }
   if (fb) {
