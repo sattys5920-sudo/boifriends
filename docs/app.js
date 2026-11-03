@@ -167,6 +167,7 @@ function meterHTML(o) {
 const ic = (act, img, label, pressed) => `<button class="ic" data-act="${act}" ${pressed ? 'aria-pressed="true"' : ''}><img src="assets/ui/ic_${img}.png?v=2" alt="">${label}</button>`;
 
 let dropStyle = null; const cheat = {};
+const APP_V = 89, COUPONS = { '여니고치': 3000, 'yeoni': 3000 };   // 쿠폰 코드는 몇 번이든 쓸 수 있어요
 function placeDrop() { const r = document.querySelector('.lcd .room'); if (!r || !dropStyle || $('#drop')) return; const c = document.createElement('button'); c.id = 'drop'; c.dataset.act = 'coin'; c.setAttribute('aria-label', '동전 줍기'); c.style.cssText = dropStyle; r.appendChild(c); }
 function render() { const y = window.scrollY; renderNow(); placeDrop(); animStep(false); window.scrollTo(0, y); }
 function renderNow() {
@@ -243,6 +244,8 @@ function renderPanel() {
   el.addEventListener('click', e => { if (e.target === el) closePanel(); });
   document.body.appendChild(el);
   if (keep) el.querySelector('.pbody').scrollTop = keep;
+  if (panel.k === 'menu') { el.querySelector('#couponf').onsubmit = ev => { ev.preventDefault(); const c = el.querySelector('#coupon').value.replace(/\s/g, '');
+    if (COUPONS[c]) { S.coins += COUPONS[c]; save(); toast(`+${COUPONS[c]} 코인`); render(); } else toast('없는 코드예요.'); }; }
   if (panel.k === 'names') { const f3 = el.querySelector('#namef'); f3.onsubmit = ev => { ev.preventDefault(); const h = S.girls[panel.g]; h.bc = el.querySelector('#bc').value.trim(); h.gc = el.querySelector('#gc').value.trim(); save(); toast('저장했어요.'); GA.sayT = withHim(pick(GLX(panel.g).heart), panel.g); GA.sayUntil = anim.tick + 20; GA.heart = 14; closePanel(); }; }
   if (panel.k === 'profile') { const f2 = el.querySelector('#callf'); if (f2) f2.onsubmit = ev => { ev.preventDefault(); const o = S.owned[cur()]; o.call = el.querySelector('#call').value.trim() || '너'; const hn = el.querySelector('#hname'); if (hn) o.name = hn.value.trim() || '???'; save(); toast('저장했어요.'); render(); }; }
 }
@@ -417,7 +420,10 @@ function startTrip(k) {
 }
 function pMenu() {
   return ['메뉴', `<div class="card" style="font-size:13px"><b>${esc(user.id)}</b></div>
-    <button class="btn white" data-act="logout">로그아웃</button>`];
+    <form id="couponf" class="card" style="display:flex;flex-direction:column;gap:6px"><label class="label" for="coupon">쿠폰 코드</label>
+      <div style="display:flex;gap:8px"><input class="field" id="coupon" maxlength="20" autocomplete="off" placeholder="코드를 입력해요"><button class="btn yellow" type="submit">받기</button></div></form>
+    <button class="btn white" data-act="logout">로그아웃</button>
+    <div class="label" style="text-align:center">버전 ${APP_V}</div>`];
 }
 
 // ---------- 행동 ----------
@@ -611,7 +617,7 @@ setInterval(() => { if (S && user) { tickTime(); save(); } }, 60000);
 // ---------- 시작 ----------
 (async () => {
   app.innerHTML = '<div class="start"><div class="egg"><div class="scr"></div></div><div class="note">불러오는 중....</div></div>';
-  const [c, t, f, it, mu, ct, tv, gl, sts] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json', 'data/sets.json'].map(u => fetch(u + '?v=88').then(r => r.ok ? r.json() : {})));
+  const [c, t, f, it, mu, ct, tv, gl, sts] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json', 'data/sets.json'].map(u => fetch(u + '?v=89').then(r => r.ok ? r.json() : {})));
   CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x])); MUM = mu; CTRY = ct; TRV = tv; GL = Array.isArray(gl) ? gl : []; SETS = Array.isArray(sts) ? sts : []; GLM = Object.fromEntries(GL.map(x => [x.id, x]));
   try { await initFirebase(); } catch (e) { console.warn('Firebase 연결 실패, 기기 저장으로', e); fb = null; }
   if (fb) {
