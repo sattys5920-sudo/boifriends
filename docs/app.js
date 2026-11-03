@@ -33,7 +33,12 @@ const JOBS = [['30 분', 30, 40], ['3 시간', 180, 150], ['8 시간', 480, 350]
 const DROP_MS = 5 * 60 * 1000;
 const GACHA = 300, DUP = 150, TALK_MAX = 3, LOVE_DAY = 4;   // 애정은 하루 최대 4 → 한 단계(25)에 약 일주일
 function addLove(o, n) { if (!o.lv || o.lv.day !== today()) o.lv = { day: today(), g: 0 }; const g = Math.max(0, Math.min(n, LOVE_DAY - o.lv.g)); const before = stageOf(o.love); o.lv.g += g; o.love = clamp(o.love + g); if (stageOf(o.love) !== before) { S.coins += 100; setTimeout(() => toast(`${stageOf(o.love)[0]}이(가) 됐어요! +100 코인`), 50); } return g; }
-let CH = [], CHM = {}, TALK = {}, FR = {}, IT = [], ITM = {}, MUM = {}, CTRY = [], TRV = {}, GL = [], GLM = {};
+let CH = [], CHM = {}, TALK = {}, FR = {}, IT = [], ITM = {}, MUM = {}, CTRY = [], TRV = {}, GL = [], GLM = {}, SETS = [];
+const SET_PAY = 300;
+const hasP = id => !!(S.owned[id] || (S.girls || {})[id]);
+const setDone = st => st.m.every(hasP);
+const setReady = () => SETS.filter(st => setDone(st) && !(S.sets || {})[st.k]);
+function setToast() { const r = setReady(); if (r.length) setTimeout(() => toast(`조합 완성! 「${r[0].n}」 도감에서 ${SET_PAY} 코인 받기`), 900); }
 // 짝: 도감 25명을 다 모으면 열려요. 여자애는 방 하나에 한 명씩, 남자친구와 같이 행동해요
 const allMet = () => CH.length && CH.every(c => S.owned[c.id]);
 // 짝에 따라 말투가 바뀌면(voice) 그 짝 방에서는 그 대사 묶음을 써요
@@ -315,9 +320,19 @@ function pPlace() {
     <span style="width:40px;height:40px;border:2px solid var(--ink);border-radius:10px;overflow:hidden;position:relative;background:#bfe6ff;flex-shrink:0">${face(id, 40)}</span>
     <span style="flex:1;font-weight:700;font-size:13px">${esc(nameOf(id))}</span><span class="label">${mine ? '지금 방' : busy ? '짝 있음' : ''}</span></button>`; }).join('')];
 }
+function pSets() {
+  const got = S.sets || {}, done = SETS.filter(st => got[st.k]).length;
+  return `<div class="card"><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700"><span>모은 조합</span><span>${done} / ${SETS.length}</span></div><div class="bar" style="margin-top:6px"><i style="width:${done / SETS.length * 100}%;background-color:var(--pink)"></i></div></div>
+    ${SETS.map(st => { const n = st.m.filter(hasP).length, ok = n === st.m.length, take = got[st.k];
+      return `<div class="card setcard${ok && !take ? ' ready' : ''}"><div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><b style="font-size:13px">${esc(st.n)}</b>
+        ${take ? '<span class="label">받음 ✓</span>' : ok ? `<button class="btn yellow" data-act="setget" data-v="${st.k}" style="padding:4px 10px;font-size:12px">${SET_PAY} 받기</button>` : `<span class="label">${n} / ${st.m.length} · ${SET_PAY} 코인</span>`}</div>
+        <div class="setfaces">${st.m.map(id => `<span class="sf" title="${hasP(id) ? esc(nameOf(id)) : '???'}" style="background:${GLM[id] ? '#ffd9e6' : '#bfe6ff'}">${hasP(id) ? face(id, 34) : '<b>?</b>'}</span>`).join('')}</div></div>`; }).join('')}`;
+}
 function pDex() {
-  const all = CH, met = all.filter(c => S.owned[c.id]).length;
-  return ['도감', `<div class="card"><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700"><span>만난 사람</span><span>${met} / ${all.length}</span></div><div class="bar" style="margin-top:6px"><i style="width:${met / all.length * 100}%;background-color:var(--mint)"></i></div></div>
+  const all = CH, met = all.filter(c => S.owned[c.id]).length, tab = panel.tab || 'ppl', ready = setReady().length;
+  const tabs = `<div class="tabs" role="tablist"><button class="tab" role="tab" aria-selected="${tab === 'ppl'}" data-act="xtab" data-v="ppl">사람</button><button class="tab" role="tab" aria-selected="${tab === 'set'}" data-act="xtab" data-v="set">조합${ready ? ` <b style="color:#e0457b">● ${ready}</b>` : ''}</button></div>`;
+  if (tab === 'set') return ['도감', tabs + pSets()];
+  return ['도감', tabs + `<div class="card"><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700"><span>만난 사람</span><span>${met} / ${all.length}</span></div><div class="bar" style="margin-top:6px"><i style="width:${met / all.length * 100}%;background-color:var(--mint)"></i></div></div>
     <div class="grid4">${all.map(c => { const o = S.owned[c.id]; return `<div class="tile"><div class="pic">${o ? `<div class="one">${face(c.id, 66)}</div>` : '<div class="sil"><i class="h"></i><i class="bd">?</i></div>'}</div><span class="nm" style="color:${o ? 'inherit' : 'var(--ink2)'}">${o ? esc(nameOf(c.id)) : '???'}</span></div>`; }).join('')}</div>
     ${allMet() ? `<div class="card"><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700"><span>짝</span><span>${Object.keys(S.girls || {}).length} / ${GL.length}</span></div></div>
     <div class="grid4">${GL.map(c => { const h = (S.girls || {})[c.id]; return `<div class="tile"><div class="pic" style="background:#ffd9e6">${h ? `<div class="one">${face(c.id, 66)}</div>` : '<div class="sil"><i class="h"></i><i class="bd">?</i></div>'}</div><span class="nm" style="color:${h ? 'inherit' : 'var(--ink2)'}">${h ? esc(c.name) : '???'}</span></div>`; }).join('')}</div>` : ''}`];
@@ -435,7 +450,7 @@ async function pull() {
   const got = Math.random() < 0.02 ? 'hidden' : pick(pool).id, dup = !!S.owned[got];
   if (dup) S.coins += DUP;
   else { const c = CHM[got]; S.owned[got] = { love: 0, food: 70, fun: 60, clean: 80, energy: 80, call: '너', room: { wp: 'plain', wc: 1, fl: 'plain', fc: 8, a: ['bed', 0], b: null, dc: null, pr: null }, talk: { day: '', n: 0, i: -1 }, met: Date.now(), sleeping: false }; }
-  S.cur = got; save(); pull.busy = false; reveal(got, dup);
+  S.cur = got; save(); pull.busy = false; reveal(got, dup); if (!dup) setToast();
   if (!dup && allMet()) setTimeout(() => toast('도감을 다 모았어요! 이제 ♥ 짝 버튼으로 짝을 찾아 줄 수 있어요.'), 600);
 }
 async function gpull() {
@@ -445,7 +460,7 @@ async function gpull() {
   await new Promise(r => setTimeout(r, 1300));
   const got = pick(GL).id, dup = !!S.girls[got];
   if (dup) S.coins += DUP; else S.girls[got] = { with: null, met: Date.now() };
-  save(); pull.busy = false; reveal(got, dup);
+  save(); pull.busy = false; reveal(got, dup); if (!dup) setToast();
 }
 function reveal(id, dup) {
   const c = CHM[id] || GLM[id], girl = !!GLM[id], hid = id === 'hidden', el = document.createElement('div'); el.className = 'reveal';
@@ -486,6 +501,8 @@ document.addEventListener('click', e => {
   if (a === 'pick') { S.cur = b.dataset.id; sayText = null; save(); panel = null; document.querySelector('.sheet')?.remove(); return render(); }
   if (a === 'logout') { panel = null; document.querySelector('.sheet')?.remove(); return logOut(); }
   if (a === 'pull') return pull();
+  if (a === 'xtab') { panel.tab = v; return renderPanel(); }
+  if (a === 'setget') { const st = SETS.find(x => x.k === v); if (!st || !setDone(st) || (S.sets || {})[v]) return; S.sets = Object.assign({}, S.sets, { [v]: true }); S.coins += SET_PAY; save(); toast(`「${st.n}」 조합 완성! +${SET_PAY} 코인`); render(); return renderPanel(); }
   if (a === 'pair') return openPanel('pair');
   if (a === 'gpull') return gpull();
   if (a === 'gplace') return openPanel('place', { g: v });
@@ -583,8 +600,8 @@ setInterval(() => { if (S && user) { tickTime(); save(); } }, 60000);
 // ---------- 시작 ----------
 (async () => {
   app.innerHTML = '<div class="start"><div class="egg"><div class="scr"></div></div><div class="note">불러오는 중....</div></div>';
-  const [c, t, f, it, mu, ct, tv, gl] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json'].map(u => fetch(u + '?v=72').then(r => r.ok ? r.json() : {})));
-  CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x])); MUM = mu; CTRY = ct; TRV = tv; GL = Array.isArray(gl) ? gl : []; GLM = Object.fromEntries(GL.map(x => [x.id, x]));
+  const [c, t, f, it, mu, ct, tv, gl, sts] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json', 'data/sets.json'].map(u => fetch(u + '?v=73').then(r => r.ok ? r.json() : {})));
+  CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x])); MUM = mu; CTRY = ct; TRV = tv; GL = Array.isArray(gl) ? gl : []; SETS = Array.isArray(sts) ? sts : []; GLM = Object.fromEntries(GL.map(x => [x.id, x]));
   try { await initFirebase(); } catch (e) { console.warn('Firebase 연결 실패, 기기 저장으로', e); fb = null; }
   if (fb) {
     fb.AU.onAuthStateChanged(fb.auth, async u => { if (u && !user) { user = { uid: u.uid, id: u.email.split('@')[0] }; await enter(); } else if (!u) { user = null; render(); } });

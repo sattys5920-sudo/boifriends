@@ -166,3 +166,7 @@ img,.px{image-rendering:pixelated;image-rendering:crisp-edges}
 .gmum{top:auto;bottom:62%}
 .pill.pairbtn{background:var(--pink2,#ffd9e6);color:#b8336a;font-weight:700;cursor:pointer}
 .twalker.tgirl{margin-left:-96px;animation-delay:.2s}
+.setcard{display:flex;flex-direction:column;gap:6px}
+.setcard.ready{background:var(--yellow2);}
+.setfaces{display:flex;flex-wrap:wrap;gap:4px}
+.setfaces .sf{width:34px;height:34px;border:2px solid var(--ink);border-radius:8px;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;color:var(--ink2);font-size:12px}
