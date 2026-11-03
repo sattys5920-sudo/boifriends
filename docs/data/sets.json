@@ -110,5 +110,110 @@
    "shima",
    "blonde_student"
   ]
+ },
+ {
+  "k": "sweet",
+  "n": "단 거 좋아하는 남자",
+  "m": [
+   "gintoki",
+   "saiki",
+   "bartender"
+  ]
+ },
+ {
+  "k": "coffee",
+  "n": "커피 한 잔",
+  "m": [
+   "hidden",
+   "mole"
+  ]
+ },
+ {
+  "k": "yareyare",
+  "n": "야레야레",
+  "m": [
+   "kyon",
+   "saiki"
+  ]
+ },
+ {
+  "k": "cook",
+  "n": "요리하는 남자",
+  "m": [
+   "usui",
+   "curly_coat"
+  ]
+ },
+ {
+  "k": "broke",
+  "n": "지갑이 가벼운 남자",
+  "m": [
+   "spiky",
+   "gintoki"
+  ]
+ },
+ {
+  "k": "deadline",
+  "n": "마감에 쫓기는 남자",
+  "m": [
+   "nozaki",
+   "headphone"
+  ]
+ },
+ {
+  "k": "indoor",
+  "n": "집돌이",
+  "m": [
+   "nifuji",
+   "headphone"
+  ]
+ },
+ {
+  "k": "rules",
+  "n": "원칙주의자",
+  "m": [
+   "izumi",
+   "karate",
+   "blindfold"
+  ]
+ },
+ {
+  "k": "lazy",
+  "n": "귀차니즘",
+  "m": [
+   "nifuji",
+   "saiki",
+   "kyon",
+   "gintoki"
+  ]
+ },
+ {
+  "k": "secret",
+  "n": "비밀 있는 남자",
+  "m": [
+   "ponytail",
+   "curly_suit",
+   "blue",
+   "saiki"
+  ]
+ },
+ {
+  "k": "compete",
+  "n": "지는 건 싫어",
+  "m": [
+   "blonde_student",
+   "baseball",
+   "karate"
+  ]
+ },
+ {
+  "k": "smile",
+  "n": "능글맞은 미소",
+  "m": [
+   "mole",
+   "usui",
+   "shima",
+   "ponytail"
+  ]
  }
 ]
