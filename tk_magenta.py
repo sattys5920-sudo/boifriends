@@ -26,6 +26,7 @@ def key(a):
     if c[1] > 180 and c[0] < 100 and c[2] < 100: return key_green(a)
     rgb = a[..., :3].astype(int); R, G, B = rgb[..., 0], rgb[..., 1], rgb[..., 2]
     mag = (np.minimum(R, B) - G > 70) & (np.abs(R - B) < 90)          # 배경과 거의 같은 색
+    mag |= (np.minimum(R, B) - G > 45) & (np.abs(R - B) < 60) & (B > 90)   # 다리 사이에 낀 어두운 마젠타
     fg = ~mag
     lab, n = ndimage.label(fg)
     if n > 1:   # 작은 부스러기 버리기
