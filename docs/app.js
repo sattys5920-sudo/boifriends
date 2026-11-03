@@ -167,7 +167,7 @@ function meterHTML(o) {
 const ic = (act, img, label, pressed) => `<button class="ic" data-act="${act}" ${pressed ? 'aria-pressed="true"' : ''}><img src="assets/ui/ic_${img}.png?v=2" alt="">${label}</button>`;
 
 let dropStyle = null; const cheat = {};
-const APP_V = 91, COUPONS = { NINOGUYA: 3000 };
+const APP_V = 92, COUPONS = { NINOGUYA: 3000 };
 // 쿠폰 입력 정리: 한글 자판 상태로 친 글자(ㅜㅑㅜㅐ혀ㅛㅁ)도 영어 자판 글자로 바꾸고, 대소문자·띄어쓰기·마침표는 무시해요
 const KEY = { ㄱ: 'r', ㄲ: 'R', ㄴ: 's', ㄷ: 'e', ㄸ: 'E', ㄹ: 'f', ㅁ: 'a', ㅂ: 'q', ㅃ: 'Q', ㅅ: 't', ㅆ: 'T', ㅇ: 'd', ㅈ: 'w', ㅉ: 'W', ㅊ: 'c', ㅋ: 'z', ㅌ: 'x', ㅍ: 'v', ㅎ: 'g',
   ㅏ: 'k', ㅐ: 'o', ㅑ: 'i', ㅒ: 'O', ㅓ: 'j', ㅔ: 'p', ㅕ: 'u', ㅖ: 'P', ㅗ: 'h', ㅘ: 'hk', ㅙ: 'ho', ㅚ: 'hl', ㅛ: 'y', ㅜ: 'n', ㅝ: 'nj', ㅞ: 'np', ㅟ: 'nl', ㅠ: 'b', ㅡ: 'm', ㅢ: 'ml', ㅣ: 'l',
@@ -630,8 +630,13 @@ setInterval(() => { if (S && user) { tickTime(); save(); } }, 60000);
 
 // ---------- 시작 ----------
 (async () => {
+  // 새 버전 확인: version.json은 저장해 두지 않고 매번 새로 받아요. 더 새 버전이 있으면 주소를 바꿔 새로 불러와요
+  try {
+    const nv = (await fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json())).v;
+    if (nv > APP_V && !location.search.includes('u=' + nv)) { location.replace(location.pathname + '?u=' + nv); return; }
+  } catch { }
   app.innerHTML = '<div class="start"><div class="egg"><div class="scr"></div></div><div class="note">불러오는 중....</div></div>';
-  const [c, t, f, it, mu, ct, tv, gl, sts] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json', 'data/sets.json'].map(u => fetch(u + '?v=91').then(r => r.ok ? r.json() : {})));
+  const [c, t, f, it, mu, ct, tv, gl, sts] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json', 'data/sets.json'].map(u => fetch(u + '?v=92').then(r => r.ok ? r.json() : {})));
   CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x])); MUM = mu; CTRY = ct; TRV = tv; GL = Array.isArray(gl) ? gl : []; SETS = Array.isArray(sts) ? sts : []; GLM = Object.fromEntries(GL.map(x => [x.id, x]));
   try { await initFirebase(); } catch (e) { console.warn('Firebase 연결 실패, 기기 저장으로', e); fb = null; }
   if (fb) {
