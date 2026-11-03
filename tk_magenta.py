@@ -21,6 +21,7 @@ def key_green(a):
     out = np.zeros(a.shape[:2] + (4,), np.uint8); out[..., :3] = np.clip(rgb, 0, 255); out[..., 3] = np.where(fg, 255, 0)
     return out
 
+NO_DESPILL = False
 def key(a):
     c = a[:4, :4, :3].reshape(-1, 3).astype(int).mean(0)
     if c[1] > 180 and c[0] < 100 and c[2] < 100: return key_green(a)
@@ -44,12 +45,29 @@ def key(a):
     # 배경 근처에 남은 분홍기 빼기(despill): R·B가 G보다 넘치는 만큼 깎아요
     near = ndimage.binary_dilation(~fg, iterations=3) & fg
     ex = np.clip(np.minimum(R, B) - G, 0, None) * near
-    rgb = rgb.copy(); rgb[..., 0] -= ex; rgb[..., 2] -= ex
+    if not NO_DESPILL: rgb = rgb.copy(); rgb[..., 0] -= ex; rgb[..., 2] -= ex
     out = np.zeros(a.shape[:2] + (4,), np.uint8); out[..., :3] = rgb; out[..., 3] = np.where(fg, 255, 0)
     return out
 
+def strip_white(out):
+    """캐릭터 둘레의 흰 테두리를 바깥부터 한 겹씩 깎아요 (안쪽 흰 셔츠·양말은 그대로)"""
+    al = out[..., 3] > 0; rgb = out[..., :3].astype(int)
+    white = (rgb.min(2) > 170) & ((rgb.max(2) - rgb.min(2)) < 60)   # 흰색·흰색에 분홍이 섞인 테두리까지
+    for _ in range(8):
+        edge = al & ~ndimage.binary_erosion(al); rm = edge & white
+        if not rm.any(): break
+        al &= ~rm
+    out[..., 3] = np.where(al, 255, 0); return out
+
+STRIP = {'chiyo'}   # 흰 테두리가 있는 시트 (흰 테두리 덕분에 분홍기 빼기도 필요 없어요: 보라 눈이 지워지지 않게)
 def cells(path, cols=5, rows=4):
-    im = np.asarray(Image.open(path).convert('RGB')); H, W = im.shape[:2]; a = key(im)
+    global NO_DESPILL
+    st = any(k in path for k in STRIP); NO_DESPILL = st
+    im = np.asarray(Image.open(path).convert('RGB')); H, W = im.shape[:2]; a = key(im); NO_DESPILL = False
+    if st:   # 흰 테두리 시트: 보통처럼 자른 뒤, 캐릭터 안쪽에 갇힌 구멍(배경색과 비슷한 보라 눈 등)은 원래 색으로 채우고 흰 테두리를 깎아요
+        al = a[..., 3] > 0; filled = ndimage.binary_fill_holes(al)
+        a[..., :3] = np.where((filled & ~al)[..., None], im, a[..., :3]); a[..., 3] = np.where(filled, 255, 0)
+        a = strip_white(a)
     def cuts(prof, n, L):   # 칸 경계는 그 근처에서 캐릭터가 가장 적게 걸치는 줄로 (시트가 격자에 딱 안 맞아도)
         out = [0]
         for k in range(1, n):
