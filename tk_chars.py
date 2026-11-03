@@ -38,7 +38,7 @@ SIDE = {
     'saiki':          dict(left='mirror', right=[(2, 2), (2, 3), (2, 4), (3, 2)]),
     'nozaki':         dict(left=[(3, 0), (3, 1), (3, 2)], right=[(2, 0), (2, 1), (2, 3), (2, 4)]),
     'shima':          dict(right=[(2, 0), (3, 2), (2, 3), (3, 3)], left='mirror'),
-    'mint':           dict(left=[(2, 1), (2, 2), (2, 3), (2, 4)], right=None, outline=True),
+    'mint':           dict(left=[(2, 1), (2, 2), (3, 1), (2, 4)], right=None, outline=True),
     'karate':         dict(left=[(2, 1), (2, 2), (3, 0), (3, 1)], right=[(2, 4), (3, 3), (3, 4)], fill_inside=True),
 }
 PHASE_ALL = True
