@@ -15,6 +15,7 @@ def key(a):
     if n > 1:   # 작은 부스러기 버리기
         sz = ndimage.sum(fg, lab, range(1, n + 1)); fg &= np.isin(lab, 1 + np.where(sz >= max(40, sz.max() * .02))[0])
     fg = ndimage.binary_fill_holes(fg)
+    fg &= ~((np.minimum(R, B) - G > 55) & (R > 150) & (B > 150))   # 연기·반짝이에 남은 분홍 번짐
     # 가장자리 분홍 번짐 빼기: 테두리 1~2 px 중 마젠타 기운이 남은 픽셀
     for _ in range(2):
         edge = fg & ~ndimage.binary_erosion(fg)
