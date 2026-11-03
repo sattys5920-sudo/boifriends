@@ -34,9 +34,11 @@ let CH = [], CHM = {}, TALK = {}, FR = {}, IT = [], ITM = {}, MUM = {}, CTRY = [
 // 짝: 도감 25명을 다 모으면 열려요. 여자애는 방 하나에 한 명씩, 남자친구와 같이 행동해요
 const allMet = () => CH.length && CH.every(c => S.owned[c.id]);
 const hisCall = g => S.girls[g].bc || nameOf(g);   // 남자애가 여자애를 부르는 이름
-const herCall = g => S.girls[g].gc || nameOf(S.girls[g].with);   // 여자애가 남자애를 부르는 이름
+const herCall = g => { const b = S.girls[g].with, gl = GLM[g]; return S.girls[g].gc || (gl.pair && gl.pair[b] && gl.pair[b].call) || nameOf(b); };   // 여자애가 남자애를 부르는 이름
 const BOY_HEART = ['{her}.', '{her}, 이리 와.', '{her}, 오늘 좀 예쁘네.', '....{her}, 좋아해.'], BOY_FIGHT = ['{her}, 왜 그래?', '....{her}, 내가 뭘 했는데.', '{her}, 미안해.'];
-const withHim = (t, g) => Math.random() < .45 && !t.includes('{him}') ? `${herCall(g)}, ${t}` : t.split('{him}').join(herCall(g));
+// 원작 커플 전용 대사(pair)는 절반쯤 섞여 나오고, 앞에 부르는 이름을 붙이지 않아요
+const lineOf = (gl, boy, k) => { const sp = gl.pair && gl.pair[boy] && gl.pair[boy][k]; return sp && Math.random() < .5 ? '\u0001' + pick(sp) : pick(gl[k]); };
+const withHim = (t, g) => t[0] === '\u0001' ? t.slice(1) : Math.random() < .45 && !t.includes('{him}') ? `${herCall(g)}, ${t}` : t.split('{him}').join(herCall(g));
 const girlOf = boy => Object.keys(S.girls || {}).find(g => S.girls[g].with === boy);
 const sub = (t, o, place) => t.split('{call}').join(o?.call || '너').split('{place}').join(place || '');
 // 혼잣말: 지금 상태에 맞는 묶음에서, 다 쓸 때까지 겹치지 않게 섞어서 꺼내요
@@ -532,8 +534,8 @@ function pairStep(id, o, g) {
   if (G.next && T >= G.next.at) { G.sayT = G.next.t; G.sayUntil = T + 20; if (G.next.fx === 'heart') G.heart = 14; G.next = null; }
   if (T % 60 !== 0) return;
   const r = Math.random(), side = A.x > 0 ? -1 : 1, meet = () => { G.x = Math.max(-0.9, Math.min(0.9, A.x + side * 0.62)); A.mode = G.mode = 'idle'; A.t = G.t = 26; };
-  if (r < .5) { A.mumT = mumbleOf(id, o); A.mumUntil = T + 16; G.next = { at: T + 14, t: withHim(pick(gl.react), g) }; }
-  else if (r < .8) { meet(); A.face = side > 0 ? 3 : 2; G.face = side > 0 ? 2 : 3; A.heart = 18; G.heart = 18; A.mumT = pick(BOY_HEART).split('{her}').join(hisCall(g)); A.mumUntil = T + 12; G.next = { at: T + 12, t: withHim(pick(gl.heart), g), fx: 'heart' }; o.fun = clamp(o.fun + 2); }
+  if (r < .5) { A.mumT = mumbleOf(id, o); A.mumUntil = T + 16; G.next = { at: T + 14, t: withHim(lineOf(gl, id, 'react'), g) }; }
+  else if (r < .8) { meet(); A.face = side > 0 ? 3 : 2; G.face = side > 0 ? 2 : 3; A.heart = 18; G.heart = 18; A.mumT = pick(BOY_HEART).split('{her}').join(hisCall(g)); A.mumUntil = T + 12; G.next = { at: T + 12, t: withHim(lineOf(gl, id, 'heart'), g), fx: 'heart' }; o.fun = clamp(o.fun + 2); }
   else { meet(); A.face = side > 0 ? 2 : 3; G.face = side > 0 ? 3 : 2; A.angry = 16; G.angry = 18; G.sayT = pick(gl.fight); G.sayUntil = T + 20; A.mumT = pick(BOY_FIGHT).split('{her}').join(hisCall(g)); A.mumUntil = T + 34; G.next = { at: T + 36, t: withHim(pick(gl.makeup), g), fx: 'heart' }; }
 }
 function paintGirl(id, o) {
@@ -569,7 +571,7 @@ setInterval(() => { if (S && user) { tickTime(); save(); } }, 60000);
 // ---------- 시작 ----------
 (async () => {
   app.innerHTML = '<div class="start"><div class="egg"><div class="scr"></div></div><div class="note">불러오는 중....</div></div>';
-  const [c, t, f, it, mu, ct, tv, gl] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json'].map(u => fetch(u + '?v=47').then(r => r.ok ? r.json() : {})));
+  const [c, t, f, it, mu, ct, tv, gl] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json'].map(u => fetch(u + '?v=48').then(r => r.ok ? r.json() : {})));
   CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x])); MUM = mu; CTRY = ct; TRV = tv; GL = Array.isArray(gl) ? gl : []; GLM = Object.fromEntries(GL.map(x => [x.id, x]));
   try { await initFirebase(); } catch (e) { console.warn('Firebase 연결 실패, 기기 저장으로', e); fb = null; }
   if (fb) {
