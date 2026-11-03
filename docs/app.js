@@ -25,7 +25,8 @@ const stageOf = l => STAGES.filter(s => l >= s[2]).pop();
 const MOODS = ['기분 최고', '설렘', '들뜸', '나른함', '심술', '시무룩', '멍함', '두근두근', '느긋함', '투덜투덜'];
 function moodOf(id) { let h = 0; for (const ch of today() + id) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return MOODS[h % MOODS.length]; }
 function stateOf(o) { if (o.sleeping) return '쿨쿨'; const a = []; if (o.food < 35) a.push('배고픔'); if (o.energy < 30) a.push('졸림'); if (o.fun < 35) a.push('심심함'); if (o.clean < 35) a.push('꼬질꼬질'); return a.join(' · ') || '만족'; }
-const JOB_NAME = { curly_suit: '소바집 배달', blue: '사진 촬영 보조', blonde_student: '누나네 카페', mole: '학원 강사', punk: '스튜디오 세션', bartender: '바텐더', curly_coat: '도서관 정리', mint: '잡지 모델', karate: '도장 사범 대리', baseball: '배팅 센터', spiky: '탈환 의뢰', kyon: '편의점', ponytail: '수박 농장', chiro: '담배 가게 카운터', saiki: '라멘집 (몰래)', nozaki: '만화 어시스턴트', ahoge: '과외', blindfold: '서버 관리', headphone: '영상 편집', gintoki: '해결사 의뢰', nifuji: '게임 테스터', usui: '메이드 카페 주방', izumi: '사신 업무', shima: '카페', hidden: '편의점 야간' };
+const JOB_NAME = { curly_suit: '소바집 배달', blue: '사진 촬영 보조', blonde_student: '누나네 카페', mole: '학원 강사', punk: '스튜디오 세션', bartender: '바텐더', curly_coat: '도서관 정리', mint: '잡지 모델', karate: '도장 사범 대리', baseball: '배팅 센터', spiky: '탈환 의뢰', kyon: '편의점', ponytail: '수박 농장', chiro: '담배 가게 카운터', saiki: '라멘집 (몰래)', nozaki: '만화 어시스턴트', ahoge: '과외', blindfold: '서버 관리', headphone: '영상 편집', gintoki: '해결사 의뢰', nifuji: '게임 테스터', usui: '메이드 카페 주방', izumi: '사신 업무', shima: '카페', hidden: '회사' };
+const JW = id => id === 'hidden' ? '회사' : '알바';   // 히든은 알바 대신 회사에 가요
 const JOBS = [['30 분', 30, 40], ['3 시간', 180, 150], ['8 시간', 480, 350]];
 const DROP_MS = 5 * 60 * 1000;
 const GACHA = 300, DUP = 150, TALK_MAX = 3, LOVE_DAY = 4;   // 애정은 하루 최대 4 → 한 단계(25)에 약 일주일
@@ -116,7 +117,7 @@ function tickTime() {
     if (o.sleeping && o.energy >= 100) o.sleeping = false;
     if (o.food < 10 && o.fun < 10) o.love = clamp(o.love - 2 * h / 24);
   }
-  for (const [id, o] of Object.entries(S.owned)) if (o.job && now >= o.job.until) { S.coins += o.job.pay; o.food = clamp(o.food - 15); o.energy = clamp(o.energy - 20); setTimeout(() => toast(`${nameOf(id)} 알바 끝! +${o.job.pay} 코인`), 300); o.job = null; }
+  for (const [id, o] of Object.entries(S.owned)) if (o.job && now >= o.job.until) { S.coins += o.job.pay; o.food = clamp(o.food - 15); o.energy = clamp(o.energy - 20); setTimeout(() => toast(`${nameOf(id)} ${id === 'hidden' ? '퇴근!' : '알바 끝!'} +${o.job.pay} 코인`), 300); o.job = null; }
   S.last = now;
   if (S.day !== today()) { S.day = today(); S.coins += 150; toast('출석 +150 코인'); S.mail = Object.keys(S.owned).map(id => ({ id, c: 10 + Math.floor(Math.random() * 31) })); }
 }
@@ -144,7 +145,7 @@ function roomHTML(id, o, scale) {
   return `<div class="room" style="background-color:${PAL[r.wc][1]};background-image:${tileUrl('wall', r.wp)}">
     <div class="floor" style="background-color:${PAL[r.fc][1]};background-image:${tileUrl('floor', r.fl)}"></div>
     ${slot('deco', r.dc, 'left:6%;top:6%')}${slot('furn', r.a, 'left:3%;bottom:20%')}${slot('furn', r.b, 'right:3%;bottom:20%')}${slot('prop', r.pr, 'left:28%;bottom:4%;z-index:2')}
-    ${id && o.sleeping && g ? sleepHTML(g, r, -16) : ''}${id && o.sleeping ? sleepHTML(id, r) : ''}${id && o.job ? `<div style="position:absolute;left:50%;top:38%;transform:translateX(-50%);z-index:5;background:#fff;border:3px solid var(--ink);border-radius:10px;padding:6px 10px;font-size:11px;text-align:center;line-height:1.5"><img src="assets/ui/ic_job.png" alt="" style="width:18px;vertical-align:-4px"> ${esc(JOB_NAME[id])} 알바 중${g ? `<br><small>${esc(nameOf(g))}도 같이</small>` : ''}<br><b id="jobleft">${timeLeft(o.job.until)}</b></div>` : ''}
+    ${id && o.sleeping && g ? sleepHTML(g, r, -16) : ''}${id && o.sleeping ? sleepHTML(id, r) : ''}${id && o.job ? `<div style="position:absolute;left:50%;top:38%;transform:translateX(-50%);z-index:5;background:#fff;border:3px solid var(--ink);border-radius:10px;padding:6px 10px;font-size:11px;text-align:center;line-height:1.5"><img src="assets/ui/ic_job.png" alt="" style="width:18px;vertical-align:-4px"> ${id === 'hidden' ? '회사 출근 중' : esc(JOB_NAME[id]) + ' 알바 중'}${g ? `<br><small>${esc(nameOf(g))}도 같이</small>` : ''}<br><b id="jobleft">${timeLeft(o.job.until)}</b></div>` : ''}
     ${id ? `<div class="shadow" id="shd" ${o.sleeping || o.job ? 'style="display:none"' : ''}></div><div class="man" id="man" ${o.sleeping || o.job ? 'style="display:none"' : ''}><img class="px" src="assets/ch/${id}.webp?v=18" alt="${esc(nameOf(id))}"></div><span class="emo" id="emo" hidden></span><span class="mumble" id="mum" hidden></span>` : ''}
     ${g ? `<div class="shadow" id="gshd" ${hideG}></div><div class="man" id="gman" ${hideG}><img class="px" src="assets/ch/${g}.webp?v=18" alt="${esc(nameOf(g))}"></div><span class="emo" id="gemo" hidden></span><span class="mumble gmum" id="gmum" hidden></span>` : ''}
     ${o.sleeping ? `<div class="night"></div><div class="sleepleft">쿨쿨 · 일어나기까지 <b id="sleepleft">${timeLeft(wakeAt(o)).replace(' 남음', '')}</b></div>` : ''}
@@ -173,7 +174,7 @@ function renderNow() {
     <div class="lcd">${roomHTML(id, o)}</div>
     <div class="say"><b>${esc(nameOf(id))} · ${moodOf(id)} · ${stateOf(o)} <span>${'♥'.repeat(TALK_MAX - t)}</span></b><span id="say">${esc(sayText || defaultSay(id, o))}</span></div>
     ${meterHTML(o)}
-    <div class="icons seven">${ic('profile', 'heart', '프로필')}${ic('decor', 'decor', '꾸미기')}${ic('job', 'job', '알바')}${ic('travel', 'travel', '여행')}${ic('gacha', 'gacha', '가챠')}${ic('dex', 'dex', '도감')}${ic('menu', 'home', '메뉴')}</div>
+    <div class="icons seven">${ic('profile', 'heart', '프로필')}${ic('decor', 'decor', '꾸미기')}${ic('job', 'job', JW(id))}${ic('travel', 'travel', '여행')}${ic('gacha', 'gacha', '가챠')}${ic('dex', 'dex', '도감')}${ic('menu', 'home', '메뉴')}</div>
     <div class="abc"><button class="round" data-act="prev" aria-label="이전 사람">◀</button><button class="round b" data-act="talk" aria-label="말 걸기">♥</button><button class="round" data-act="next" aria-label="다음 사람">▶</button></div>
   </div>`;
   if (panel) renderPanel();
@@ -330,7 +331,7 @@ function pGive() {
 function give(k) {
   const id = cur(), o = S.owned[id], it = ITM[k], c = CHM[id];
   if (o.sleeping) { panel = null; document.querySelector('.sheet')?.remove(); return toast('자는 중이라 못 해요. 깨우려면 깨우기를 눌러요.'); }
-  if (o.job) { panel = null; document.querySelector('.sheet')?.remove(); return toast('알바 중이라 못 해요.'); }
+  if (o.job) { panel = null; document.querySelector('.sheet')?.remove(); return toast(`${JW(cur()) === '회사' ? '회사에 가서' : '알바 중이라'} 못 해요.`); }
   if (S.coins < it.p) return toast('코인이 부족해요.');
   if (o.food >= 95 && it.t === 'food') return toast('배불러서 못 먹겠대요.');
   S.coins -= it.p; o.known = o.known || { l: [], d: [] };
@@ -344,8 +345,8 @@ function give(k) {
 function girlEat(id) { const g = girlOf(id); if (!g) return; GA.heart = 12; GA.sayT = withHim(pick(GLX(g).eat), g); GA.sayUntil = anim.tick + 18; }
 function pJob() {
   const id = cur(), o = S.owned[id];
-  if (o.job) return ['알바', `<div class="card" style="text-align:center;line-height:1.8"><img src="assets/ui/ic_job.png" alt="" style="width:32px"><br><b>${esc(JOB_NAME[id])}</b><br>${timeLeft(o.job.until)} · +${o.job.pay} 코인</div>`];
-  return ['알바', `<div class="card" style="text-align:center"><img src="assets/ui/ic_job.png" alt="" style="width:32px"><br><b>${esc(JOB_NAME[id])}</b></div>
+  if (o.job) return [JW(id), `<div class="card" style="text-align:center;line-height:1.8"><img src="assets/ui/ic_job.png" alt="" style="width:32px"><br><b>${esc(JOB_NAME[id])}</b><br>${timeLeft(o.job.until)} · +${o.job.pay} 코인</div>`];
+  return [JW(id), `<div class="card" style="text-align:center"><img src="assets/ui/ic_job.png" alt="" style="width:32px"><br><b>${esc(JOB_NAME[id])}</b></div>
     ${JOBS.map((j, i) => `<button class="btn ${i === 1 ? 'yellow' : 'white'}" data-act="dojob" data-v="${i}" ${o.sleeping ? 'disabled' : ''} style="display:flex;justify-content:space-between;align-items:center"><span>${j[0]}</span><span><img src="assets/ui/ic_coin.png" alt="" style="width:16px;vertical-align:-3px"> +${j[2]}</span></button>`).join('')}`];
 }
 function pMail() {
@@ -353,7 +354,7 @@ function pMail() {
 }
 function pTravel() {
   const id = cur(), o = S.owned[id], st = o.trips || {};
-  const busy = o.job ? '알바 중이라 못 가요.' : o.sleeping ? '자는 중이라 못 가요.' : '';
+  const busy = o.job ? (id === 'hidden' ? '회사에 가서 못 가요.' : '알바 중이라 못 가요.') : o.sleeping ? '자는 중이라 못 가요.' : '';
   return ['여행', `${busy ? `<div class="card" style="text-align:center;font-size:12px">${busy}</div>` : ''}<div class="trips">${CTRY.map(c => `<button class="trip" data-act="gotrip" data-v="${c.k}" ${busy ? 'disabled' : ''}>
     <span class="tpic" style="background-image:url(assets/travel/${c.k}.png?v=2)"></span>
     <span class="tname">${esc(c.n)}${st[c.k] ? ` <small>✓${st[c.k]}</small>` : ''}</span>
@@ -403,7 +404,7 @@ function pMenu() {
 function act(kind) {
   const id = cur(), o = S.owned[id]; if (!o) return;
   const say = t => { sayText = t; };
-  if (o.job) { toast('알바 중이라 못 해요.'); return; }
+  if (o.job) { toast(`${JW(cur()) === '회사' ? '회사에 가서' : '알바 중이라'} 못 해요.`); return; }
   if (o.sleeping && kind !== 'sleep') { toast('자는 중이라 못 해요. 깨우려면 깨우기를 눌러요.'); return; }
   if (kind === 'feed') { if (o.food >= 95) say('(배불러....)'); else { o.food = clamp(o.food + 25); addLove(o, 1); S.coins += 15; anim.heart = 10; say('(냠냠)'); girlEat(id); } }
   if (kind === 'play') { if (o.energy < 15) say('(피곤해....)'); else { o.fun = clamp(o.fun + 22); o.energy = clamp(o.energy - 12); addLove(o, 1); S.coins += 15; anim.heart = 10; anim.mode = 'hop'; anim.t = 10; say('(신난다!)'); } }
@@ -580,7 +581,7 @@ setInterval(() => { if (S && user) { tickTime(); save(); } }, 60000);
 // ---------- 시작 ----------
 (async () => {
   app.innerHTML = '<div class="start"><div class="egg"><div class="scr"></div></div><div class="note">불러오는 중....</div></div>';
-  const [c, t, f, it, mu, ct, tv, gl] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json'].map(u => fetch(u + '?v=66').then(r => r.ok ? r.json() : {})));
+  const [c, t, f, it, mu, ct, tv, gl] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json'].map(u => fetch(u + '?v=67').then(r => r.ok ? r.json() : {})));
   CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x])); MUM = mu; CTRY = ct; TRV = tv; GL = Array.isArray(gl) ? gl : []; GLM = Object.fromEntries(GL.map(x => [x.id, x]));
   try { await initFirebase(); } catch (e) { console.warn('Firebase 연결 실패, 기기 저장으로', e); fb = null; }
   if (fb) {
