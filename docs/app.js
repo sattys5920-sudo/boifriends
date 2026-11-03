@@ -33,7 +33,7 @@ function addLove(o, n) { if (!o.lv || o.lv.day !== today()) o.lv = { day: today(
 let CH = [], CHM = {}, TALK = {}, FR = {}, IT = [], ITM = {}, MUM = {}, CTRY = [], TRV = {}, GL = [], GLM = {};
 // 짝: 도감 25명을 다 모으면 열려요. 여자애는 방 하나에 한 명씩, 남자친구와 같이 행동해요
 const allMet = () => CH.length && CH.every(c => S.owned[c.id]);
-const hisCall = g => S.girls[g].bc || nameOf(g);   // 남자애가 여자애를 부르는 이름
+const hisCall = g => { const b = S.girls[g].with, gl = GLM[g]; return S.girls[g].bc || (gl.pair && gl.pair[b] && gl.pair[b].his) || nameOf(g); };   // 남자애가 여자애를 부르는 이름
 const herCall = g => { const b = S.girls[g].with, gl = GLM[g]; return S.girls[g].gc || (gl.pair && gl.pair[b] && gl.pair[b].call) || nameOf(b); };   // 여자애가 남자애를 부르는 이름
 const BOY_HEART = ['{her}.', '{her}, 이리 와.', '{her}, 오늘 좀 예쁘네.', '....{her}, 좋아해.'], BOY_FIGHT = ['{her}, 왜 그래?', '....{her}, 내가 뭘 했는데.', '{her}, 미안해.'];
 // 원작 커플 전용 대사(pair)는 절반쯤 섞여 나오고, 앞에 부르는 이름을 붙이지 않아요
