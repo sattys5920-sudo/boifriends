@@ -69,6 +69,9 @@ def cells(path, cols=5, rows=4):
         al = a[..., 3] > 0; R, G, B = [im[..., i].astype(int) for i in range(3)]
         pure = (R > 200) & (B > 200) & (G < 70)   # 팔 사이로 보이는 진짜 배경은 채우지 않아요
         filled = ndimage.binary_fill_holes(al) & (al | ~pure)
+        tie = (B - R > 10) & (B < 215) & (B > 90) & (G < 80) & ndimage.binary_dilation(al, iterations=3)   # 테두리에 붙은 진한 보라(넥타이)
+        for _ in range(3): tie |= ndimage.binary_dilation(tie) & (B - R > 5) & (B < 220) & (G < 80) & ~pure
+        filled |= tie
         a[..., :3] = np.where((filled & ~al)[..., None], im, a[..., :3]); a[..., 3] = np.where(filled, 255, 0)
     if st:   # 흰 테두리 시트: 보통처럼 자른 뒤, 캐릭터 안쪽에 갇힌 구멍(배경색과 비슷한 보라 눈 등)은 원래 색으로 채우고 흰 테두리를 깎아요
         al = a[..., 3] > 0; filled = ndimage.binary_fill_holes(al)
