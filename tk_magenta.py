@@ -59,11 +59,17 @@ def strip_white(out):
         al &= ~rm
     out[..., 3] = np.where(al, 255, 0); return out
 
+KEEP_PURPLE = {'nifuji'}   # 보라 넥타이처럼 분홍기 빼기에 지워지는 색이 있는 시트
 STRIP = {'chiyo'}   # 흰 테두리가 있는 시트 (흰 테두리 덕분에 분홍기 빼기도 필요 없어요: 보라 눈이 지워지지 않게)
 def cells(path, cols=5, rows=4):
     global NO_DESPILL
-    st = any(k in path for k in STRIP); NO_DESPILL = st
+    st = any(k in path for k in STRIP); NO_DESPILL = st or any(k in path for k in KEEP_PURPLE)
     im = np.asarray(Image.open(path).convert('RGB')); H, W = im.shape[:2]; a = key(im); NO_DESPILL = False
+    if any(k in path for k in KEEP_PURPLE):   # 몸 안쪽에 갇힌 구멍(보라 넥타이 등)은 원래 색으로 채워요
+        al = a[..., 3] > 0; R, G, B = [im[..., i].astype(int) for i in range(3)]
+        pure = (R > 200) & (B > 200) & (G < 70)   # 팔 사이로 보이는 진짜 배경은 채우지 않아요
+        filled = ndimage.binary_fill_holes(al) & (al | ~pure)
+        a[..., :3] = np.where((filled & ~al)[..., None], im, a[..., :3]); a[..., 3] = np.where(filled, 255, 0)
     if st:   # 흰 테두리 시트: 보통처럼 자른 뒤, 캐릭터 안쪽에 갇힌 구멍(배경색과 비슷한 보라 눈 등)은 원래 색으로 채우고 흰 테두리를 깎아요
         al = a[..., 3] > 0; filled = ndimage.binary_fill_holes(al)
         a[..., :3] = np.where((filled & ~al)[..., None], im, a[..., :3]); a[..., 3] = np.where(filled, 255, 0)
