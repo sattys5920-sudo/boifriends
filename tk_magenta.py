@@ -61,7 +61,7 @@ def strip_white(out):
 
 KEEP_LENS = {'saiki_v2'}   # 초록 렌즈 안경
 KEEP_PURPLE = {'nifuji'}   # 보라 넥타이처럼 분홍기 빼기에 지워지는 색이 있는 시트
-STRIP = {'chiyo'}   # 흰 테두리가 있는 시트 (흰 테두리 덕분에 분홍기 빼기도 필요 없어요: 보라 눈이 지워지지 않게)
+STRIP = {'chiyo.png'}   # 흰 테두리가 있는 시트 (흰 테두리 덕분에 분홍기 빼기도 필요 없어요: 보라 눈이 지워지지 않게)
 def cells(path, cols=5, rows=4):
     global NO_DESPILL
     st = any(k in path for k in STRIP); NO_DESPILL = st or any(k in path for k in KEEP_PURPLE)
