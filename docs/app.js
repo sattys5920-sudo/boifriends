@@ -167,7 +167,7 @@ function meterHTML(o) {
 const ic = (act, img, label, pressed) => `<button class="ic" data-act="${act}" ${pressed ? 'aria-pressed="true"' : ''}><img src="assets/ui/ic_${img}.png?v=2" alt="">${label}</button>`;
 
 let dropStyle = null; const cheat = {};
-const APP_V = 137, COUPONS = { NINOGUYA: 3000 };
+const APP_V = 138, COUPONS = { NINOGUYA: 3000 };
 // 쿠폰 입력 정리: 한글 자판 상태로 친 글자(ㅜㅑㅜㅐ혀ㅛㅁ)도 영어 자판 글자로 바꾸고, 대소문자·띄어쓰기·마침표는 무시해요
 const KEY = { ㄱ: 'r', ㄲ: 'R', ㄴ: 's', ㄷ: 'e', ㄸ: 'E', ㄹ: 'f', ㅁ: 'a', ㅂ: 'q', ㅃ: 'Q', ㅅ: 't', ㅆ: 'T', ㅇ: 'd', ㅈ: 'w', ㅉ: 'W', ㅊ: 'c', ㅋ: 'z', ㅌ: 'x', ㅍ: 'v', ㅎ: 'g',
   ㅏ: 'k', ㅐ: 'o', ㅑ: 'i', ㅒ: 'O', ㅓ: 'j', ㅔ: 'p', ㅕ: 'u', ㅖ: 'P', ㅗ: 'h', ㅘ: 'hk', ㅙ: 'ho', ㅚ: 'hl', ㅛ: 'y', ㅜ: 'n', ㅝ: 'nj', ㅞ: 'np', ㅟ: 'nl', ㅠ: 'b', ㅡ: 'm', ㅢ: 'ml', ㅣ: 'l',
@@ -192,7 +192,7 @@ function renderNow() {
     <div class="brand"><img src="assets/ui/ic_heart.png" alt="">YEONIGOTCHI</div>
     <div class="topbar"><button class="who" data-act="who" aria-label="돌볼 사람 바꾸기"><span class="face">${face(id, 32)}</span><span>${esc(nameOf(id))}</span><img src="assets/ui/ic_back.png" alt="" style="width:14px;transform:rotate(-90deg)"></button>
       <span style="display:flex;gap:6px">${allMet() ? `<button class="pill pairbtn" data-act="pair" aria-label="짝 찾아 주기">♥ 짝</button>` : ''}${S.mail && S.mail.length ? `<button class="pill" data-act="mail" aria-label="편지 ${S.mail.length}통"><img src="assets/ui/ic_mail.png" alt="">${S.mail.length}</button>` : ''}<span class="pill coin"><img src="assets/ui/ic_coin.png" alt="">${S.coins.toLocaleString('ko-KR')}</span></span></div>
-    <div class="icons">${ic('give', 'food', '주기')}${ic('play', 'play', '놀기')}${ic('wash', 'wash', '씻기')}${ic('sleep', 'sleep', o.sleeping ? '깨우기' : '재우기', o.sleeping)}${ic('talk', 'talk', '대화')}</div>
+    <div class="icons six">${ic('give', 'food', '주기')}${ic('play', 'play', '놀기')}${ic('wash', 'wash', '씻기')}${ic('sleep', 'sleep', o.sleeping ? '깨우기' : '재우기', o.sleeping)}${ic('talk', 'talk', '대화')}${ic('all', 'star', '전체')}</div>
     <div class="lcd">${roomHTML(id, o)}</div>
     <div class="say"><b>${esc(nameOf(id))} · ${moodOf(id)} · ${stateOf(o)} <span>${'♥'.repeat(TALK_MAX - t)}</span></b><span id="say">${esc(sayText || defaultSay(id, o))}</span></div>
     ${meterHTML(o)}
@@ -251,7 +251,7 @@ function renderPanel() {
   const old = document.querySelector('.sheet .pbody'), keep = old && renderPanel.k === panel.k ? old.scrollTop : 0;   // 같은 창을 다시 그릴 때는 스크롤 위치를 지켜요
   renderPanel.k = panel.k;
   document.querySelector('.sheet')?.remove();
-  const f = { travel: pTravel, who: pWho, profile: pProfile, decor: pDecor, gacha: pGacha, pair: pPair, place: pPlace, names: pNames, dex: pDex, menu: pMenu, give: pGive, job: pJob, mail: pMail }[panel.k];
+  const f = { travel: pTravel, who: pWho, profile: pProfile, decor: pDecor, gacha: pGacha, all: pAll, pair: pPair, place: pPlace, names: pNames, dex: pDex, menu: pMenu, give: pGive, job: pJob, mail: pMail }[panel.k];
   const [title, body] = f();
   const el = document.createElement('div'); el.className = 'sheet';
   el.innerHTML = `<div class="panel" role="dialog" aria-label="${esc(title)}"><div class="phead"><h2>${esc(title)}</h2>${Object.keys(S.owned).length ? '<button class="close" data-act="close" aria-label="닫기"><img src="assets/ui/ic_back.png" alt=""></button>' : `<span class="pill coin"><img src="assets/ui/ic_coin.png" alt="">${S.coins}</span>`}</div><div class="pbody">${body}</div></div>`;
@@ -432,6 +432,33 @@ function startTrip(k) {
   }
   el.querySelector('[data-tskip]').onclick = done;
 }
+// 전체 돌보기: 모은 사람 모두에게 한 번에
+function pAll() {
+  const ids = Object.keys(S.owned), n = ids.length, busy = ids.filter(i => S.owned[i].job).length, zz = ids.filter(i => S.owned[i].sleeping).length;
+  return ['전체 돌보기', `<div class="card" style="font-size:12px;text-align:center;line-height:1.7">모두 ${n}명 · 일하는 중 ${busy}명 · 자는 중 ${zz}명<br><span class="label">일하는 중이거나 자는 사람은 빼고 해요.</span></div>
+    <button class="btn yellow" data-act="allfeed"><img src="assets/ui/ic_food.png" alt="" style="width:18px;vertical-align:-4px"> 전체 먹이기</button>
+    <button class="btn yellow" data-act="allplay"><img src="assets/ui/ic_play.png" alt="" style="width:18px;vertical-align:-4px"> 전체 놀기</button>
+    <button class="btn yellow" data-act="allsleep"><img src="assets/ui/ic_sleep.png" alt="" style="width:18px;vertical-align:-4px"> 전체 재우기</button>
+    <button class="btn white" data-act="allwake">전체 깨우기</button>
+    <div class="card"><b style="font-size:13px"><img src="assets/ui/ic_job.png" alt="" style="width:18px;vertical-align:-4px"> 전체 일 보내기</b>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">${JOBS.map((j, i) => `<button class="btn ${i === 1 ? 'yellow' : 'white'}" data-act="alljob" data-v="${i}" style="display:flex;justify-content:space-between;align-items:center"><span>${j[0]}</span><span><img src="assets/ui/ic_coin.png" alt="" style="width:16px;vertical-align:-3px"> 1명당 +${j[2]}</span></button>`).join('')}</div></div>`];
+}
+function bulk(kind, v) {
+  let done = 0, skip = 0, coins = 0;
+  for (const [id, o] of Object.entries(S.owned)) {
+    if (o.job) { skip++; continue; }
+    if (kind === 'feed') { if (o.sleeping || o.food >= 95) { skip++; continue; } o.food = clamp(o.food + 25); addLove(o, 1); coins += 15; done++; }
+    if (kind === 'play') { if (o.sleeping || o.energy < 15) { skip++; continue; } o.fun = clamp(o.fun + 22); o.energy = clamp(o.energy - 12); addLove(o, 1); coins += 15; done++; }
+    if (kind === 'sleep') { if (o.sleeping) { skip++; continue; } o.sleeping = true; done++; }
+    if (kind === 'wake') { if (!o.sleeping) { skip++; continue; } o.sleeping = false; done++; }
+    if (kind === 'job') { const j = JOBS[+v]; o.job = { until: Date.now() + j[1] * 60000, pay: j[2] }; o.sleeping = false; done++; }
+  }
+  S.coins += coins; save();
+  const word = { feed: '먹였어요', play: '같이 놀았어요', sleep: '재웠어요', wake: '깨웠어요', job: '일 보냈어요' }[kind];
+  toast(done ? `${done}명 ${word}${coins ? ` · +${coins} 코인` : ''}${skip ? ` (${skip}명은 못 해요)` : ''}` : '할 수 있는 사람이 없어요.');
+  if (done) { anim.heart = 10; sayText = null; }
+  panel = null; document.querySelector('.sheet')?.remove(); render();
+}
 function pMenu() {
   return ['메뉴', `<div class="card" style="font-size:13px"><b>${esc(user.id)}</b></div>
     <form id="couponf" class="card" style="display:flex;flex-direction:column;gap:6px"><label class="label" for="coupon">쿠폰 코드</label>
@@ -532,6 +559,8 @@ document.addEventListener('click', e => {
   if (a === 'pick') { S.cur = b.dataset.id; sayText = null; save(); panel = null; document.querySelector('.sheet')?.remove(); return render(); }
   if (a === 'logout') { panel = null; document.querySelector('.sheet')?.remove(); return logOut(); }
   if (a === 'pull') return pull();
+  if (a === 'all') return openPanel('all');
+  if (a === 'allfeed' || a === 'allplay' || a === 'allsleep' || a === 'allwake' || a === 'alljob') return bulk(a.slice(3), v);
   if (a === 'xtab') { panel.tab = v; return renderPanel(); }
   if (a === 'setget') { const st = SETS.find(x => x.k === v); if (!st || !setDone(st) || (S.sets || {})[v]) return; S.sets = Object.assign({}, S.sets, { [v]: true }); S.coins += SET_PAY; save(); toast(`「${st.n}」 조합 완성! +${SET_PAY} 코인`); render(); return renderPanel(); }
   if (a === 'pair') return openPanel('pair');
@@ -636,7 +665,7 @@ setInterval(() => { if (S && user) { tickTime(); save(); } }, 60000);
     if (nv > APP_V && !location.search.includes('u=' + nv)) { location.replace(location.pathname + '?u=' + nv); return; }
   } catch { }
   app.innerHTML = '<div class="start"><div class="egg"><div class="scr"></div></div><div class="note">불러오는 중....</div></div>';
-  const [c, t, f, it, mu, ct, tv, gl, sts] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json', 'data/sets.json'].map(u => fetch(u + '?v=137').then(r => r.ok ? r.json() : {})));
+  const [c, t, f, it, mu, ct, tv, gl, sts] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json', 'data/sets.json'].map(u => fetch(u + '?v=138').then(r => r.ok ? r.json() : {})));
   CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x])); MUM = mu; CTRY = ct; TRV = tv; GL = Array.isArray(gl) ? gl : []; SETS = Array.isArray(sts) ? sts : []; GLM = Object.fromEntries(GL.map(x => [x.id, x]));
   try { await initFirebase(); } catch (e) { console.warn('Firebase 연결 실패, 기기 저장으로', e); fb = null; }
   if (fb) {
