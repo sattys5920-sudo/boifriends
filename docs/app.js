@@ -167,7 +167,7 @@ function meterHTML(o) {
 const ic = (act, img, label, pressed) => `<button class="ic" data-act="${act}" ${pressed ? 'aria-pressed="true"' : ''}><img src="assets/ui/ic_${img}.png?v=2" alt="">${label}</button>`;
 
 let dropStyle = null; const cheat = {};
-const APP_V = 148, COUPONS = { NINOGUYA: 3000 };
+const APP_V = 149, COUPONS = { NINOGUYA: 3000 };
 // 쿠폰 입력 정리: 한글 자판 상태로 친 글자(ㅜㅑㅜㅐ혀ㅛㅁ)도 영어 자판 글자로 바꾸고, 대소문자·띄어쓰기·마침표는 무시해요
 const KEY = { ㄱ: 'r', ㄲ: 'R', ㄴ: 's', ㄷ: 'e', ㄸ: 'E', ㄹ: 'f', ㅁ: 'a', ㅂ: 'q', ㅃ: 'Q', ㅅ: 't', ㅆ: 'T', ㅇ: 'd', ㅈ: 'w', ㅉ: 'W', ㅊ: 'c', ㅋ: 'z', ㅌ: 'x', ㅍ: 'v', ㅎ: 'g',
   ㅏ: 'k', ㅐ: 'o', ㅑ: 'i', ㅒ: 'O', ㅓ: 'j', ㅔ: 'p', ㅕ: 'u', ㅖ: 'P', ㅗ: 'h', ㅘ: 'hk', ㅙ: 'ho', ㅚ: 'hl', ㅛ: 'y', ㅜ: 'n', ㅝ: 'nj', ㅞ: 'np', ㅟ: 'nl', ㅠ: 'b', ㅡ: 'm', ㅢ: 'ml', ㅣ: 'l',
@@ -437,6 +437,7 @@ function pAll() {
   const ids = Object.keys(S.owned), n = ids.length, busy = ids.filter(i => S.owned[i].job).length, zz = ids.filter(i => S.owned[i].sleeping).length;
   return ['전체 돌보기', `<div class="card" style="font-size:12px;text-align:center;line-height:1.7">모두 ${n}명 · 일하는 중 ${busy}명 · 자는 중 ${zz}명<br><span class="label">일하는 중이거나 자는 사람은 빼고 해요.</span></div>
     <button class="btn yellow" data-act="allfeed"><img src="assets/ui/ic_food.png" alt="" style="width:18px;vertical-align:-4px"> 전체 먹이기</button>
+    <button class="btn yellow" data-act="allwash"><img src="assets/ui/ic_wash.png" alt="" style="width:18px;vertical-align:-4px"> 전체 씻기기</button>
     <button class="btn yellow" data-act="allplay"><img src="assets/ui/ic_play.png" alt="" style="width:18px;vertical-align:-4px"> 전체 놀기</button>
     <button class="btn yellow" data-act="allsleep"><img src="assets/ui/ic_sleep.png" alt="" style="width:18px;vertical-align:-4px"> 전체 재우기</button>
     <button class="btn white" data-act="allwake">전체 깨우기</button>
@@ -449,12 +450,13 @@ function bulk(kind, v) {
     if (o.job) { skip++; continue; }
     if (kind === 'feed') { if (o.sleeping || o.food >= 95) { skip++; continue; } o.food = clamp(o.food + 25); addLove(o, 1); coins += 15; done++; }
     if (kind === 'play') { if (o.sleeping || o.energy < 15) { skip++; continue; } o.fun = clamp(o.fun + 22); o.energy = clamp(o.energy - 12); addLove(o, 1); coins += 15; done++; }
+    if (kind === 'wash') { if (o.sleeping || o.clean >= 95) { skip++; continue; } o.clean = clamp(o.clean + 35); coins += 10; done++; }
     if (kind === 'sleep') { if (o.sleeping) { skip++; continue; } o.sleeping = true; done++; }
     if (kind === 'wake') { if (!o.sleeping) { skip++; continue; } o.sleeping = false; done++; }
     if (kind === 'job') { const j = JOBS[+v]; o.job = { until: Date.now() + j[1] * 60000, pay: j[2] }; o.sleeping = false; done++; }
   }
   S.coins += coins; save();
-  const word = { feed: '먹였어요', play: '같이 놀았어요', sleep: '재웠어요', wake: '깨웠어요', job: '일 보냈어요' }[kind];
+  const word = { feed: '먹였어요', wash: '씻겼어요', play: '같이 놀았어요', sleep: '재웠어요', wake: '깨웠어요', job: '일 보냈어요' }[kind];
   toast(done ? `${done}명 ${word}${coins ? ` · +${coins} 코인` : ''}${skip ? ` (${skip}명은 못 해요)` : ''}` : '할 수 있는 사람이 없어요.');
   if (done) { anim.heart = 10; sayText = null; }
   panel = null; document.querySelector('.sheet')?.remove(); render();
@@ -560,7 +562,7 @@ document.addEventListener('click', e => {
   if (a === 'logout') { panel = null; document.querySelector('.sheet')?.remove(); return logOut(); }
   if (a === 'pull') return pull();
   if (a === 'all') return openPanel('all');
-  if (a === 'allfeed' || a === 'allplay' || a === 'allsleep' || a === 'allwake' || a === 'alljob') return bulk(a.slice(3), v);
+  if (a === 'allfeed' || a === 'allwash' || a === 'allplay' || a === 'allsleep' || a === 'allwake' || a === 'alljob') return bulk(a.slice(3), v);
   if (a === 'xtab') { panel.tab = v; return renderPanel(); }
   if (a === 'setget') { const st = SETS.find(x => x.k === v); if (!st || !setDone(st) || (S.sets || {})[v]) return; S.sets = Object.assign({}, S.sets, { [v]: true }); S.coins += SET_PAY; save(); toast(`「${st.n}」 조합 완성! +${SET_PAY} 코인`); render(); return renderPanel(); }
   if (a === 'pair') return openPanel('pair');
@@ -665,7 +667,7 @@ setInterval(() => { if (S && user) { tickTime(); save(); } }, 60000);
     if (nv > APP_V && !location.search.includes('u=' + nv)) { location.replace(location.pathname + '?u=' + nv); return; }
   } catch { }
   app.innerHTML = '<div class="start"><div class="egg"><div class="scr"></div></div><div class="note">불러오는 중....</div></div>';
-  const [c, t, f, it, mu, ct, tv, gl, sts] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json', 'data/sets.json'].map(u => fetch(u + '?v=148').then(r => r.ok ? r.json() : {})));
+  const [c, t, f, it, mu, ct, tv, gl, sts] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json', 'data/sets.json'].map(u => fetch(u + '?v=149').then(r => r.ok ? r.json() : {})));
   CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x])); MUM = mu; CTRY = ct; TRV = tv; GL = Array.isArray(gl) ? gl : []; SETS = Array.isArray(sts) ? sts : []; GLM = Object.fromEntries(GL.map(x => [x.id, x]));
   try { await initFirebase(); } catch (e) { console.warn('Firebase 연결 실패, 기기 저장으로', e); fb = null; }
   if (fb) {
