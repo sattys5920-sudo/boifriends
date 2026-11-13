@@ -75,7 +75,7 @@ function spr(cat, k, col, sc) {
   return `<div class="clip" style="width:${it[2] * sc}px;height:${it[3] * sc}px;POS"><img class="px" src="assets/decor/${cat}.png" alt="" style="width:${S.sw * sc}px;height:${S.sh * sc}px;margin-left:${-col * S.cw * sc}px;margin-top:${-i * S.ch * sc}px"></div>`;
 }
 const icon = (k, sz) => `<span class="itm" style="width:${sz}px;height:${sz}px"><img class="px" src="assets/ui/items.png" alt="" style="width:${IT.length * sz}px;height:${sz}px;margin-left:${-ITM[k].i * sz}px"></span>`;
-const face = (id, w) => { const s = w / 96; return `<img class="px" src="assets/ch/${id}.webp?v=75" alt="" style="position:absolute;width:${384 * s}px;height:${528 * s}px;left:${-(96 * s - w) / 2}px;top:0;max-width:none">`; };
+const face = (id, w) => { const s = w / 96; return `<img class="px" src="assets/ch/${id}.webp?v=76" alt="" style="position:absolute;width:${384 * s}px;height:${528 * s}px;left:${-(96 * s - w) / 2}px;top:0;max-width:none">`; };
 
 // ---------- 저장 ----------
 let fb = null, user = null, S = null, saveT = null;
@@ -143,7 +143,7 @@ function sleepHTML(id, r, dy) {
   const pos = r.a && r.a[0] === 'bed' ? 'left:3%;bottom:20%' : r.b && r.b[0] === 'bed' ? 'right:3%;bottom:20%' : 'left:calc(50% - 44px);bottom:6%';
   const s = 36 / 96;
   return `<div style="position:absolute;width:88px;height:56px;${pos};z-index:${dy ? 4 : 5};${dy ? `transform:translate(12px,${dy}px)` : ''}"><div style="position:absolute;inset:0;filter:brightness(.22)">
-    <div style="position:absolute;left:11px;top:1px;width:36px;height:50px;overflow:hidden;transform:rotate(-90deg)"><img class="px" src="assets/ch/${id}.webp?v=75" alt="" style="width:${384 * s}px;height:${528 * s}px;max-width:none;margin-top:${-132 * s}px"></div>
+    <div style="position:absolute;left:11px;top:1px;width:36px;height:50px;overflow:hidden;transform:rotate(-90deg)"><img class="px" src="assets/ch/${id}.webp?v=76" alt="" style="width:${384 * s}px;height:${528 * s}px;max-width:none;margin-top:${-132 * s}px"></div>
     <div style="position:absolute;left:19px;top:19px;width:67px;height:29px;border:2px solid var(--ink);border-radius:8px 6px 4px 4px;background:#8ccff5;background-image:repeating-linear-gradient(90deg,transparent 0 10px,rgba(255,255,255,.5) 10px 13px)"></div></div>
     ${dy ? '' : '<span class="emo" style="left:8px;top:-22px;color:#5b6bd6">Z z z</span>'}</div>`;
 }
@@ -153,8 +153,8 @@ function roomHTML(id, o, scale) {
     <div class="floor" style="background-color:${PAL[r.fc][1]};background-image:${tileUrl('floor', r.fl)}"></div>
     ${slot('deco', r.dc, 'left:6%;top:6%')}${slot('furn', r.a, 'left:3%;bottom:20%')}${slot('furn', r.b, 'right:3%;bottom:20%')}${slot('prop', r.pr, 'left:28%;bottom:4%;z-index:2')}
     ${id && o.sleeping && g ? sleepHTML(g, r, -16) : ''}${id && o.sleeping ? sleepHTML(id, r) : ''}${id && o.job ? `<div style="position:absolute;left:50%;top:38%;transform:translateX(-50%);z-index:5;background:#fff;border:3px solid var(--ink);border-radius:10px;padding:6px 10px;font-size:11px;text-align:center;line-height:1.5"><img src="assets/ui/ic_job.png" alt="" style="width:18px;vertical-align:-4px"> ${WORK[id] ? WORK[id][1] : esc(JOB_NAME[id]) + ' 알바 중'}${g ? `<br><small>${esc(nameOf(g))}도 같이</small>` : ''}<br><b id="jobleft">${timeLeft(o.job.until)}</b></div>` : ''}
-    ${id ? `<div class="shadow" id="shd" ${o.sleeping || o.job ? 'style="display:none"' : ''}></div><div class="man" id="man" ${o.sleeping || o.job ? 'style="display:none"' : ''}><img class="px" src="assets/ch/${id}.webp?v=75" alt="${esc(nameOf(id))}"></div><span class="emo" id="emo" hidden></span><span class="mumble" id="mum" hidden></span>` : ''}
-    ${g ? `<div class="shadow" id="gshd" ${hideG}></div><div class="man" id="gman" ${hideG}><img class="px" src="assets/ch/${g}.webp?v=75" alt="${esc(nameOf(g))}"></div><span class="emo" id="gemo" hidden></span><span class="mumble gmum" id="gmum" hidden></span>` : ''}
+    ${id ? `<div class="shadow" id="shd" ${o.sleeping || o.job ? 'style="display:none"' : ''}></div><div class="man" id="man" ${o.sleeping || o.job ? 'style="display:none"' : ''}><img class="px" src="assets/ch/${id}.webp?v=76" alt="${esc(nameOf(id))}"></div><span class="emo" id="emo" hidden></span><span class="mumble" id="mum" hidden></span>` : ''}
+    ${g ? `<div class="shadow" id="gshd" ${hideG}></div><div class="man" id="gman" ${hideG}><img class="px" src="assets/ch/${g}.webp?v=76" alt="${esc(nameOf(g))}"></div><span class="emo" id="gemo" hidden></span><span class="mumble gmum" id="gmum" hidden></span>` : ''}
     ${o.sleeping ? `<div class="night"></div><div class="sleepleft">쿨쿨 · 일어나기까지 <b id="sleepleft">${timeLeft(wakeAt(o)).replace(' 남음', '')}</b></div>` : ''}
   </div>`;
 }
@@ -167,7 +167,7 @@ function meterHTML(o) {
 const ic = (act, img, label, pressed) => `<button class="ic" data-act="${act}" ${pressed ? 'aria-pressed="true"' : ''}><img src="assets/ui/ic_${img}.png?v=2" alt="">${label}</button>`;
 
 let dropStyle = null; const cheat = {};
-const APP_V = 149, COUPONS = { NINOGUYA: 3000 };
+const APP_V = 150, COUPONS = { NINOGUYA: 3000 };
 // 쿠폰 입력 정리: 한글 자판 상태로 친 글자(ㅜㅑㅜㅐ혀ㅛㅁ)도 영어 자판 글자로 바꾸고, 대소문자·띄어쓰기·마침표는 무시해요
 const KEY = { ㄱ: 'r', ㄲ: 'R', ㄴ: 's', ㄷ: 'e', ㄸ: 'E', ㄹ: 'f', ㅁ: 'a', ㅂ: 'q', ㅃ: 'Q', ㅅ: 't', ㅆ: 'T', ㅇ: 'd', ㅈ: 'w', ㅉ: 'W', ㅊ: 'c', ㅋ: 'z', ㅌ: 'x', ㅍ: 'v', ㅎ: 'g',
   ㅏ: 'k', ㅐ: 'o', ㅑ: 'i', ㅒ: 'O', ㅓ: 'j', ㅔ: 'p', ㅕ: 'u', ㅖ: 'P', ㅗ: 'h', ㅘ: 'hk', ㅙ: 'ho', ㅚ: 'hl', ㅛ: 'y', ㅜ: 'n', ㅝ: 'nj', ㅞ: 'np', ㅟ: 'nl', ㅠ: 'b', ㅡ: 'm', ㅢ: 'ml', ㅣ: 'l',
@@ -407,7 +407,7 @@ function startTrip(k) {
   if (tg) lines[1] = `${nameOf(tg)}: ${withHim(sub(pick(GLX(tg).trip), o, c.n), tg)}`;
   const n = (FR[id] || [4, 4, 4, 4])[3], el = document.createElement('div'); el.className = 'tripview';
   el.innerHTML = `<div class="tsay"> </div><div class="tstage" style="background-image:url(assets/travel/${k}.png?v=2)"><div class="tplace">${esc(c.n)}</div>
-    <div class="twalker"><img class="px" src="assets/ch/${id}.webp?v=75" alt=""></div>${tg ? `<div class="twalker tgirl"><img class="px" src="assets/ch/${tg}.webp?v=75" alt=""></div>` : ''}<span class="emo tjoy">♪</span></div>
+    <div class="twalker"><img class="px" src="assets/ch/${id}.webp?v=76" alt=""></div>${tg ? `<div class="twalker tgirl"><img class="px" src="assets/ch/${tg}.webp?v=76" alt=""></div>` : ''}<span class="emo tjoy">♪</span></div>
     <div class="tbar"><i></i></div><button class="btn white tskip" data-tskip="1">바로 돌아오기</button>`;
   document.body.appendChild(el);
   const gimg = el.querySelector('.tgirl img'), gn = tg ? (FR[tg] || [4, 4, 4, 4])[3] : 1;
@@ -667,7 +667,7 @@ setInterval(() => { if (S && user) { tickTime(); save(); } }, 60000);
     if (nv > APP_V && !location.search.includes('u=' + nv)) { location.replace(location.pathname + '?u=' + nv); return; }
   } catch { }
   app.innerHTML = '<div class="start"><div class="egg"><div class="scr"></div></div><div class="note">불러오는 중....</div></div>';
-  const [c, t, f, it, mu, ct, tv, gl, sts] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json', 'data/sets.json'].map(u => fetch(u + '?v=149').then(r => r.ok ? r.json() : {})));
+  const [c, t, f, it, mu, ct, tv, gl, sts] = await Promise.all(['data/chars.json', 'data/talk.json', 'data/frames.json', 'data/items.json', 'data/mumble.json', 'data/countries.json', 'data/travel.json', 'data/girls.json', 'data/sets.json'].map(u => fetch(u + '?v=150').then(r => r.ok ? r.json() : {})));
   CH = c; CHM = Object.fromEntries(c.map(x => [x.id, x])); TALK = t; FR = f; IT = it; ITM = Object.fromEntries(it.map(x => [x.k, x])); MUM = mu; CTRY = ct; TRV = tv; GL = Array.isArray(gl) ? gl : []; SETS = Array.isArray(sts) ? sts : []; GLM = Object.fromEntries(GL.map(x => [x.id, x]));
   try { await initFirebase(); } catch (e) { console.warn('Firebase 연결 실패, 기기 저장으로', e); fb = null; }
   if (fb) {
